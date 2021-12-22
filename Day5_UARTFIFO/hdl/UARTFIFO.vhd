@@ -152,9 +152,17 @@ Architecture rtl Of UARTFIFO Is
 
 	--Signal for Button Enable Tx
 	signal	rTxFfEmpty		: std_logic;
+	signal	wTxFfEmpty		: std_logic;
 
 	-- Debounce
 	signal	rButtonCnt		: std_logic_vector( 22 downto 0 );	
+
+	type StateType	is
+		(
+			stIdle,
+			stWaitEnd
+		);
+	signal rState	:	StateType;
 	
 Begin
 
@@ -242,9 +250,9 @@ Begin
 	begin
 		if rising_edge(UserClk) then
 			if rSysRstB = '0' then
-				rTxFfEmpty	<=	'1';	
+				rTxFfEmpty	<=	'1';
 			else
-				if rButtonCnt(22) = '1' and wFfEmpty = '0' then
+				if rState = stWaitEnd then
 					rTxFfEmpty <= '0';
 				else
 					rTxFfEmpty <= '1';
@@ -252,6 +260,38 @@ Begin
 			end if;
 		end if;
 	end process u_rTxFfEmpty;
+
+	wTxFfEmpty	<=	wFfEmpty or rTxFfEmpty;
+
+	u_rState: process(UserClk)
+	begin
+		if rising_edge(UserClk) then
+			if rSysRstB = '0' then
+				rState	<=	stIdle;
+			else
+				case( rState ) is
+				
+					when stIdle =>
+						if rButtonCnt(22) = '1' then
+							rState	<=	stWaitEnd;
+						else
+							rState	<=	stIdle;
+						end if;
+					
+					when stWaitEnd	=>
+						if wFfEmpty = '1' then
+							rState	<=	stIdle;
+						else
+							rState	<=	stWaitEnd;
+						end if ;
+				
+				end case ;
+				
+			end if;
+		end if;
+	end process u_rState;
+
+
 
 -----------------------------------------------------
 -- RxSerial -> FIFO -> TxSerial
@@ -294,7 +334,7 @@ Begin
 		RstB		=> rSysRstB		,
 		Clk			=> UserClk	    ,
 
-		TxFfEmpty	=> rTxFfEmpty	,
+		TxFfEmpty	=> wTxFfEmpty	,
 		TxFfRdData	=> rFfRdData	,
 		TxFfRdEn	=> rFfRdReq		,
 
