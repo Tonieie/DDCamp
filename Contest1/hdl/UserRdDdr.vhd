@@ -63,6 +63,17 @@ Architecture rtl Of UserRdDdr Is
 	
 	signal	rMemInitDone	: std_logic_vector( 1 downto 0 );
 	signal	rHDMIReq		: std_logic;
+
+	signal	rMtDdrRdReq		: std_logic;
+	signal	rMtDdrRdAddr	: std_logic_vector(28 downto 7);
+
+	type UserRdStateType is
+		(
+			stInit		,
+			stReq		,
+			stWtEnd	
+		);
+	signal	rState			: UserRdStateType;
 	
 Begin
 
@@ -71,6 +82,14 @@ Begin
 ----------------------------------------------------------------------------------
 
 	HDMIReq			<= rHDMIReq;
+
+	MtDdrRdReq		<= rMtDdrRdReq;
+	MtDdrRdAddr(28 downto 7)		<= rMtDdrRdAddr(28 downto 27)  & x"00000"; 
+
+	URd2HFfWrEn	<=	D2URdFfWrEn;
+	URd2HFfWrData(63 downto 0)	<=	D2URdFfWrData(63 downto 0);
+	D2URdFfWrCnt(15 downto 0)	<=	URd2HFfWrCnt(15 downto 0);
+
 	
 ----------------------------------------------------------------------------------
 -- DFF 
@@ -104,5 +123,68 @@ Begin
 			end if;
 		end if;
 	End Process u_rHDMIReq;
+
+	u_rMtDdrRdReq: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				rMtDdrRdReq	<=	'0';
+			else
+				if (rState = stReq) then
+					rMtDdrRdReq	<=	'1';
+				else
+					rMtDdrRdReq	<=	'0';
+				end if ;
+			end if;
+		end if;
+	end process u_rMtDdrRdReq;
+
+	u_rMtDdrRdAddr: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if ( rState = stReq ) then
+				rMtDdrRdAddr(28 downto 27)	<=	DipSwitch(1 downto 0);
+			else
+				rMtDdrRdAddr(28 downto 27)	<=	rMtDdrRdAddr(28 downto 27);
+			end if ;
+		end if;
+	end process u_rMtDdrRdAddr;
+
+----------------------------------------------------------------------------------
+-- State Machine 
+----------------------------------------------------------------------------------
+	u_rState: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				rState	<=	stInit;
+			else
+				case( rState ) is
+
+					when stInit	=>
+						if ( rMemInitDone(1) = '1' ) then
+							rState	<= stReq;
+						else
+							rState	<= stInit;
+						end if ;
+				
+					when stReq	=>
+						if ( MtDdrRdBusy = '1' ) then
+							rState 	<=	stWtEnd;
+						else
+							rState 	<=	stReq;
+						end if ;
+
+					when stWtEnd =>
+						if ( MtDdrRdBusy = '0' ) then
+							rState 	<=	stReq;
+						else
+							rState 	<=	stWtEnd;
+						end if;
+				
+				end case ;
+			end if;
+		end if;
+	end process u_rState;
 	
 End Architecture rtl;
