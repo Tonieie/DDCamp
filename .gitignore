@@ -1,5 +1,7 @@
 **/db/**
 **/incremental_db/**
 **/output_files/**
+**/ddr3_qsys/**
+**/quartusip/**
 **/work/**
 *.wlf

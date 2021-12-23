@@ -1,0 +1,76 @@
+IP Upgrade report for HDMITest
+Tue Dec 12 15:33:25 2017
+Quartus Prime Version 17.1.0 Build 590 10/25/2017 SJ Lite Edition
+
+
+---------------------
+; Table of Contents ;
+---------------------
+  1. Legal Notice
+  2. IP Upgrade Summary
+  3. Successfully Upgraded IP Components
+  4. IP Upgrade Messages
+
+
+
+----------------
+; Legal Notice ;
+----------------
+Copyright (C) 2017  Intel Corporation. All rights reserved.
+Your use of Intel Corporation's design tools, logic functions 
+and other software and tools, and its AMPP partner logic 
+functions, and any output files from any of the foregoing 
+(including device programming or simulation files), and any 
+associated documentation or information are expressly subject 
+to the terms and conditions of the Intel Program License 
+Subscription Agreement, the Intel Quartus Prime License Agreement,
+the Intel FPGA IP License Agreement, or other applicable license
+agreement, including, without limitation, that your use is for
+the sole purpose of programming logic devices manufactured by
+Intel and sold by Intel or its authorized distributors.  Please
+refer to the applicable agreement for further details.
+
+
+
++----------------------------------------------------------------------------+
+; IP Upgrade Summary                                                         ;
++------------------------------+---------------------------------------------+
+; IP Components Upgrade Status ; Passed - Tue Dec 12 15:33:25 2017           ;
+; Quartus Prime Version        ; 17.1.0 Build 590 10/25/2017 SJ Lite Edition ;
+; Revision Name                ; HDMITest                                    ;
+; Top-level Entity Name        ; HDMITest                                    ;
+; Family                       ; MAX 10                                      ;
++------------------------------+---------------------------------------------+
+
+
++-------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Successfully Upgraded IP Components                                                                                                                         ;
++-----------------+----------------+---------+----------------------------------+--------------------------------+----------------------------------+---------+
+; Entity Name     ; Component Name ; Version ; Original Source File             ; Generation File Path           ; New Source File                  ; Message ;
++-----------------+----------------+---------+----------------------------------+--------------------------------+----------------------------------+---------+
+; asyncfifo256x24 ; FIFO           ; 16.0    ; ../quartusip/asyncfifo256x24.qip ; ../quartusip/asyncfifo256x24.v ; ../quartusip/asyncfifo256x24.qip ;         ;
+; PLL_VGA         ; ALTPLL         ; 16.0    ; ../quartusip/PLL_VGA.qip         ; ../quartusip/PLL_VGA.v         ; ../quartusip/PLL_VGA.qip         ;         ;
+; PLL50           ; ALTPLL         ; 16.0    ; ../quartusip/PLL50.qip           ; ../quartusip/PLL50.v           ; ../quartusip/PLL50.qip           ;         ;
++-----------------+----------------+---------+----------------------------------+--------------------------------+----------------------------------+---------+
+
+
++---------------------+
+; IP Upgrade Messages ;
++---------------------+
+Info (11902): Backing up file "../quartusip/asyncfifo256x24.v" to "../quartusip/asyncfifo256x24.BAK.v"
+Info (11837): Started upgrading IP component FIFO with file "../quartusip/asyncfifo256x24.v"
+Info (11902): Backing up file "../quartusip/PLL_VGA.v" to "../quartusip/PLL_VGA.BAK.v"
+Info (11837): Started upgrading IP component ALTPLL with file "../quartusip/PLL_VGA.v"
+Info (11902): Backing up file "../quartusip/PLL50.v" to "../quartusip/PLL50.BAK.v"
+Info (11837): Started upgrading IP component ALTPLL with file "../quartusip/PLL50.v"
+Info (11131): Completed upgrading IP component FIFO with file "../quartusip/asyncfifo256x24.v"
+Info (11131): Completed upgrading IP component ALTPLL with file "../quartusip/PLL_VGA.v"
+Info (11131): Completed upgrading IP component ALTPLL with file "../quartusip/PLL50.v"
+Info (23030): Evaluation of Tcl script c:/intelfpga_lite/17.1/quartus/common/tcl/internal/ip_regen/ip_regen.tcl was successful
+Info: Quartus Prime Shell was successful. 0 errors, 0 warnings
+    Info: Peak virtual memory: 662 megabytes
+    Info: Processing ended: Tue Dec 12 15:33:26 2017
+    Info: Elapsed time: 00:00:14
+    Info: Total CPU time (on all processors): 00:00:21
+
+
