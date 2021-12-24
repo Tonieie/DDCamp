@@ -5,3 +5,5 @@
 **/quartusip/**
 **/work/**
 *.wlf
+*.csv
+*.stp
