@@ -70,7 +70,6 @@ Architecture rtl Of UserRdDdr Is
 	type UserRdStateType is
 		(
 			stInit		,
-			stCheckFf	,
 			stReq		,
 			stWtMtDone		
 		);
@@ -147,11 +146,13 @@ Begin
 				rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
 				rMtDdrRdAddr(26 downto 7)	<=	(others => '0');
 			else
-				if rMtDdrRdAddr(21 downto 20) = "11" then
-					rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
-					rMtDdrRdAddr(26 downto 7)	<= (others => '0');
-				elsif( (rState = stWtMtDone) and (MtDdrRdBusy = '0') ) then
-					rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) + 1;
+				if( (rState = stWtMtDone) and (MtDdrRdBusy = '0') ) then
+					if rMtDdrRdAddr(21 downto 7) = ("101" & x"FFF") then
+						rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
+						rMtDdrRdAddr(26 downto 7)	<= (others => '0');
+					else
+						rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) + 1;
+					end if ;
 				else
 					rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7);
 				end if;
@@ -172,20 +173,11 @@ Begin
 
 					when stInit	=>
 						if ( rMemInitDone(1) = '1' ) then
-							rState	<= stCheckFf;
+							rState	<= stReq;
 						else
 							rState	<= stInit;
 						end if ;
 
-					when stCheckFf	=>
-						if rMtDdrRdAddr(21 downto 20) = "11" then
-							rState	<=	stCheckFf;
-						elsif ( URd2HFfWrCnt(15 downto 5) /= ("111"&x"FF") ) then
-							rState	<=	stReq;
-						else
-							rState	<=	stCheckFf;
-						end if ;
-				
 					when stReq	=>
 						if ( MtDdrRdBusy = '1' ) then
 							rState 	<=	stWtMtDone;
@@ -195,7 +187,7 @@ Begin
 
 					when stWtMtDone =>
 						if ( MtDdrRdBusy = '0' ) then
-							rState 	<=	stCheckFf;
+							rState 	<=	stReq;
 						else
 							rState 	<=	stWtMtDone;
 						end if;
