@@ -70,8 +70,9 @@ Architecture rtl Of UserRdDdr Is
 	type UserRdStateType is
 		(
 			stInit		,
+			stCheckFf	,
 			stReq		,
-			stWtEnd	
+			stWtMtDone		
 		);
 	signal	rState			: UserRdStateType;
 	
@@ -84,7 +85,7 @@ Begin
 	HDMIReq			<= rHDMIReq;
 
 	MtDdrRdReq		<= rMtDdrRdReq;
-	MtDdrRdAddr(28 downto 7)		<= rMtDdrRdAddr(28 downto 27)  & x"00000"; 
+	MtDdrRdAddr(28 downto 7)		<= rMtDdrRdAddr(28 downto 7); 
 
 	URd2HFfWrEn	<=	D2URdFfWrEn;
 	URd2HFfWrData(63 downto 0)	<=	D2URdFfWrData(63 downto 0);
@@ -142,11 +143,19 @@ Begin
 	u_rMtDdrRdAddr: process(Clk)
 	begin
 		if rising_edge(Clk) then
-			if ( rState = stReq ) then
-				rMtDdrRdAddr(28 downto 27)	<=	DipSwitch(1 downto 0);
+			if RstB = '0' then
+				rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
+				rMtDdrRdAddr(26 downto 7)	<=	(others => '0');
 			else
-				rMtDdrRdAddr(28 downto 27)	<=	rMtDdrRdAddr(28 downto 27);
-			end if ;
+				if rMtDdrRdAddr(21 downto 20) = "11" then
+					rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
+					rMtDdrRdAddr(26 downto 7)	<= (others => '0');
+				elsif( (rState = stWtMtDone) and (MtDdrRdBusy = '0') ) then
+					rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) + 1;
+				else
+					rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7);
+				end if;
+			end if;
 		end if;
 	end process u_rMtDdrRdAddr;
 
@@ -163,23 +172,32 @@ Begin
 
 					when stInit	=>
 						if ( rMemInitDone(1) = '1' ) then
-							rState	<= stReq;
+							rState	<= stCheckFf;
 						else
 							rState	<= stInit;
+						end if ;
+
+					when stCheckFf	=>
+						if rMtDdrRdAddr(21 downto 20) = "11" then
+							rState	<=	stCheckFf;
+						elsif ( URd2HFfWrCnt(15 downto 5) /= ("111"&x"FF") ) then
+							rState	<=	stReq;
+						else
+							rState	<=	stCheckFf;
 						end if ;
 				
 					when stReq	=>
 						if ( MtDdrRdBusy = '1' ) then
-							rState 	<=	stWtEnd;
+							rState 	<=	stWtMtDone;
 						else
 							rState 	<=	stReq;
 						end if ;
 
-					when stWtEnd =>
+					when stWtMtDone =>
 						if ( MtDdrRdBusy = '0' ) then
-							rState 	<=	stReq;
+							rState 	<=	stCheckFf;
 						else
-							rState 	<=	stWtEnd;
+							rState 	<=	stWtMtDone;
 						end if;
 				
 				end case ;
