@@ -68,6 +68,8 @@ Architecture rtl Of UserWrDdr Is
 			stWtMtDone	
 		);
 	signal	rState			: UserWrStateType;
+
+	signal rRowReqCnt		: std_logic_vector(4 downto 0);
 	
 Begin
 
@@ -118,12 +120,17 @@ Begin
 	begin
 		if rising_edge(Clk) then
 			if RstB = '0' then
-				rMtDdrWrAddr(28 downto 7)	<=	(others => '0');
+				-- start at addr = 24544 (last row first col which is the first received pixcel's addr)
+				rMtDdrWrAddr(28 downto 7)	<=	"00" & x"05FE0";
 			else
 				if( (rState = stWtMtDone) and (MtDdrWrBusy = '0') ) then
-					if rMtDdrWrAddr(21 downto 7) = ("101" & x"FFF") then
+					-- check if reached first row last col
+					if rMtDdrWrAddr(26 downto 7) = 31 then
 						rMtDdrWrAddr(28 downto 27)	<= rMtDdrWrAddr(28 downto 27) + 1;
-						rMtDdrWrAddr(26 downto 7)	<= (others => '0');
+						rMtDdrWrAddr(26 downto 7)	<= x"05FE0";
+					-- if writen to the last col then go back to the upper line
+					elsif rRowReqCnt = 31 then
+						rMtDdrWrAddr(28 downto 7)	<= rMtDdrWrAddr(28 downto 7) - 63;
 					else
 						rMtDdrWrAddr(28 downto 7)	<= rMtDdrWrAddr(28 downto 7) + 1;
 					end if ;
@@ -133,6 +140,21 @@ Begin
 			end if;
 		end if;
 	end process u_rMtDdrWrAddr;
+
+	u_rRowReqCnt: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				rRowReqCnt	<=	(others => '0');
+			else
+				if( (rState = stWtMtDone) and (MtDdrWrBusy = '0') ) then
+					rRowReqCnt	<=	rRowReqCnt + 1;
+				else
+					rRowReqCnt	<=	rRowReqCnt;
+				end if;
+			end if;
+		end if;
+	end process u_rRowReqCnt;
 
 ----------------------------------------------------------------------------------
 -- State Machine 
