@@ -40,7 +40,8 @@ architecture rtl of BitMapPatt is
     signal  rBmFfWrData     : std_logic_vector(23 downto 0);
 
     signal  rHeaderCnt      : std_logic_vector(5 downto 0);
-    signal  rRGBCnt          : std_logic_vector(1 downto 0);
+    signal  rRGBCnt         : std_logic_vector(1 downto 0);
+    signal  rPixCnt         : std_logic_vector(19 downto 0);
 
 begin
     
@@ -87,6 +88,23 @@ begin
             end if;
         end if;
     end process u_rRGBCnt;
+
+    u_rPixCnt: process(Clk)
+    begin
+        if rising_edge(Clk) then
+            if RstB = '0' then
+                rPixCnt <=  (others => '0');
+            else
+                if rPixCnt = 786432 then
+                    rPixCnt <=  (others => '0');
+                elsif rBmFfWrEn = '1' then
+                    rPixCnt <=  rPixCnt + 1;
+                else
+                    rPixCnt <=  rPixCnt;
+                end if ;
+            end if;
+        end if;
+    end process u_rPixCnt;
 
     u_rBmFfWrData: process(Clk)
     begin
@@ -145,7 +163,11 @@ begin
                         end if ;
 
                     when stRdData   =>
-                        rState  <=  stRdData;
+                        if rPixCnt = 786432 then
+                            rState  <=  stIdle;
+                        else
+                            rState  <=  stRdData;
+                        end if ;
 
                end case ;
            end if;
