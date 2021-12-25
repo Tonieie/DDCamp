@@ -123,6 +123,20 @@ Architecture rtl Of Question2 Is
 		rdusedw			: out	std_logic_vector(7 downto 0)
 	);
 	End Component fifo256x64to32;
+
+	Component BitMapPatt is
+		port (
+			RstB        : in    std_logic;
+			Clk         : in    std_logic;
+
+			RxBmWrEn    : in    std_logic;
+			RxBmWrData  : in    std_logic_vector(7 downto 0);
+
+			BmFfWrEn    : out   std_logic;
+			BmFfWrData  : out   std_logic_vector(23 downto 0);
+			BmFfWrCnt   : in    std_logic_vector(7 downto 0)
+		);
+	End Component BitMapPatt;
 	
 	Component RxSerial Is
 	Port(
@@ -131,7 +145,6 @@ Architecture rtl Of Question2 Is
 		
 		SerDataIn	: in	std_logic;
 		
-		RxFfFull	: in	std_logic;
 		RxFfWrData	: out	std_logic_vector( 7 downto 0 );
 		RxFfWrEn	: out	std_logic
 	);
@@ -287,6 +300,57 @@ Architecture rtl Of Question2 Is
 	signal	rRstBUser		: std_logic;
 	signal	rSysRstB		: std_logic;
 	signal	SysRst			: std_logic;
+	signal	rDipSw			: std_logic_vector(1 downto 0);
+
+	-- B2UWrFf
+	signal	B2UWrFfWrEn		: std_logic;
+	signal	B2UWrFfWrData	: std_logic_vector( 31 downto 0 );
+	signal	B2UWrFfWrCnt	: std_logic_vector( 15 downto 0 );
+	signal	B2UWrFfRdEn		: std_logic; 
+	signal	B2UWrFfRdData	: std_logic_vector( 63 downto 0 );
+	signal	B2UWrFfRdCnt	: std_logic_vector( 15 downto 0 );
+
+	--RxSerial
+	signal	Rx2BWrData		: std_logic_vector(7 downto 0);
+	signal	Rx2BWrEn		: std_logic;
+	
+	-- UWr2DFf
+	signal	UWr2DFfRdEn		: std_logic;
+	signal	UWr2DFfRdData	: std_logic_vector( 63 downto 0 );
+	signal	UWr2DFfRdCnt	: std_logic_vector( 15 downto 0 );
+
+	-- WrCtrl I/F
+	signal	MtDdrWrReq		: std_logic;
+	signal	MtDdrWrBusy		: std_logic;
+	signal	MtDdrWrAddr		: std_logic_vector( 28 downto 7 );
+	
+	-- D2URdFf
+	signal	D2URdFfWrEn		: std_logic;
+	signal	D2URdFfWrData	: std_logic_vector( 63 downto 0 );
+	signal	D2URdFfWrCnt	: std_logic_vector( 15 downto 0 );
+	
+	-- RdCtrl I/F
+	signal	MtDdrRdReq		: std_logic;
+	signal	MtDdrRdBusy		: std_logic;
+	signal	MtDdrRdAddr		: std_logic_vector( 28 downto 7 );
+	
+	-- URd2HFf I/F
+	signal	URd2HFfWrEn		: std_logic;
+	signal	URd2HFfWrData	: std_logic_vector( 63 downto 0 );
+	signal	URd2HFfWrCnt	: std_logic_vector( 15 downto 0 );
+	signal	URd2HFfRdEn		: std_logic;
+	signal	URd2HFfRdData	: std_logic_vector( 31 downto 0 );
+	signal	URd2HFfEmpty	: std_logic;
+	signal	URd2HFfRdCnt	: std_logic_vector( 15 downto 0 );
+	
+	-- HDMI I/F
+	signal	HDMIReq			: std_logic;
+	signal	HDMIBusy		: std_logic;
+	signal	HDMIUserClk		: std_logic;
+	
+	-- Status LED
+	signal	MemInitDone		: std_logic;
+	signal	HDMIStatus		: std_logic_vector( 1 downto 0 );
 	
 Begin
 
@@ -331,10 +395,215 @@ Begin
 	
 	SysRst		<= not rSysRstB;
 	
+	u_rDipSw : Process (UserClk) Is
+	Begin
+		if ( rising_edge(UserClk) ) then
+			rDipSw		<= DipSwitch;
+		end if;
+	End Process u_rDipSw;
+	
 -----------------------------------------------------
 -- Behavior
 
 
 
+-----------------------------------------------------
+-- Port map
+	u_BitMapPatt : BitMapPatt 
+	Port map
+    (
+        RstB        => rSysRstB		,
+        Clk         => UserClk		,
+
+        RxBmWrEn    => Rx2BWrEn		,
+        RxBmWrData  => Rx2BWrData(7 downto 0)	,
+
+        BmFfWrEn    => B2UWrFfWrEn	,
+        BmFfWrData  => B2UWrFfWrData(23 downto 0)	,
+        BmFfWrCnt   => B2UWrFfWrCnt(7 downto 0) 
+	);
+
+	B2UWrFfWrData(31 downto 24)	<= (others=>'0');
+	
+	-- Fill Fifo count 
+	B2UWrFfWrCnt(15 downto 8)	<= (others=>'1');
+	B2UWrFfRdCnt(15 downto 7)	<= (others=>'0');
+
+	u_RxSerial : RxSerial
+	Port map
+	(
+		RstB		=> rSysRstB		,
+		Clk			=> UserClk		,
+
+		SerDataIn	=> RxSerData	,
+
+		RxFfWrData	=> Rx2BWrData(7 downto 0)	,
+		RxFfWrEn	=> Rx2BWrEn
+	);
+	
+	-- Fifo TestPatt -> UserWrDdr -> MtDdr
+	u_T2UWrFf : fifo256x32to64
+	Port map
+	(
+		aclr			=> SysRst			,
+		
+		wrclk			=> UserClk			,
+		wrreq			=> B2UWrFfWrEn		,
+		data			=> B2UWrFfWrData	,
+		wrfull			=> open				,
+		wrusedw			=> B2UWrFfWrCnt(7 downto 0),
+		
+		rdclk			=> UserClk			,
+		rdreq			=> B2UWrFfRdEn		,
+		q				=> B2UWrFfRdData	,
+		rdempty			=> open				,
+		rdusedw			=> B2UWrFfRdCnt(6 downto 0)
+	);
+	
+	u_UserWrDdr : UserWrDdr
+	Port map
+	(
+		RstB			=> rSysRstB			,
+		Clk				=> UserClk			,
+
+		-- WrCtrl I/F
+		MemInitDone		=> MemInitDone		,
+		MtDdrWrReq		=> MtDdrWrReq		,
+		MtDdrWrBusy		=> MtDdrWrBusy		,
+		MtDdrWrAddr		=> MtDdrWrAddr		,
+
+		-- T2UWrFf I/F
+		T2UWrFfRdEn		=> B2UWrFfRdEn		,
+		T2UWrFfRdData	=> B2UWrFfRdData	,
+		T2UWrFfRdCnt	=> B2UWrFfRdCnt		,
+
+		-- UWr2DFf I/F
+		UWr2DFfRdEn		=> UWr2DFfRdEn		,
+		UWr2DFfRdData	=> UWr2DFfRdData	,
+		UWr2DFfRdCnt	=> UWr2DFfRdCnt
+	);
+	
+	-- DDR Interface
+	u_MtDdr : MtDdr
+    Port map
+	(
+		UserRstB		=> rSysRstB			,
+		UserClk			=> UserClk			,
+
+		MemInitDone		=> MemInitDone		,
+		
+		MtDdrWrReq		=> MtDdrWrReq		,
+		MtDdrWrBusy		=> MtDdrWrBusy		,
+		MtDdrWrAddr		=> MtDdrWrAddr		,
+		
+		WrFfRdEn		=> UWr2DFfRdEn		,
+		WrFfRdData		=> UWr2DFfRdData	,
+		WrFfRdCnt		=> UWr2DFfRdCnt		,
+		
+		MtDdrRdReq		=> MtDdrRdReq		,
+		MtDdrRdBusy		=> MtDdrRdBusy		,
+		MtDdrRdAddr		=> MtDdrRdAddr		,
+		
+		RdFfWrEn		=> D2URdFfWrEn		,
+		RdFfWrData		=> D2URdFfWrData	,
+		RdFfWrCnt		=> D2URdFfWrCnt		,
+		
+		DDR3_A			=> DDR3_A			,
+		DDR3_BA			=> DDR3_BA			,
+		DDR3_CAS_n		=> DDR3_CAS_n		,
+		DDR3_CK_n		=> DDR3_CK_n		,
+		DDR3_CK_p		=> DDR3_CK_p		,
+		DDR3_CKE		=> DDR3_CKE			,
+		DDR3_CLK_50		=> DDR3_CLK_50		,
+		DDR3_CS_n		=> DDR3_CS_n		,
+		DDR3_DM			=> DDR3_DM			,
+		DDR3_DQ			=> DDR3_DQ			,
+		DDR3_DQS_n		=> DDR3_DQS_n		,
+		DDR3_DQS_p		=> DDR3_DQS_p		,
+		DDR3_ODT		=> DDR3_ODT			,
+		DDR3_RAS_n		=> DDR3_RAS_n		,
+		DDR3_RESET_n	=> DDR3_RESET_n		,
+		DDR3_WE_n		=> DDR3_WE_n		
+	);
+	
+	u_UserRdDdr : UserRdDdr
+	Port map
+	(
+		RstB			=> rSysRstB			,
+		Clk				=> UserClk			,
+
+		DipSwitch		=> rDipSw			,
+		
+		-- HDMICtrl I/F
+		MemInitDone		=> MemInitDone		,
+		HDMIReq			=> HDMIReq			,
+		HDMIBusy		=> HDMIBusy			,
+
+		-- RdCtrl I/F
+		MtDdrRdReq		=> MtDdrRdReq		,
+		MtDdrRdBusy		=> MtDdrRdBusy		,
+		MtDdrRdAddr		=> MtDdrRdAddr		,
+
+		-- D2URdFf I/F
+		D2URdFfWrEn		=> D2URdFfWrEn		,
+		D2URdFfWrData	=> D2URdFfWrData	,
+		D2URdFfWrCnt	=> D2URdFfWrCnt		,
+
+		-- URd2HFf I/F
+		URd2HFfWrEn		=> URd2HFfWrEn		,
+		URd2HFfWrData	=> URd2HFfWrData	,
+		URd2HFfWrCnt	=> URd2HFfWrCnt
+	);
+	
+	-- Fill Fifo count 
+	URd2HFfWrCnt(15 downto 7)	<= (others=>'1');
+	URd2HFfRdCnt(15 downto 8)	<= (others=>'0');
+	
+	-- Fifo MtDdr -> UserRdDdr -> HDMI
+	u_URd2HFf : fifo256x64to32
+	Port map
+	(
+		aclr			=> SysRst			,
+		
+		wrclk			=> UserClk			,
+		wrreq			=> URd2HFfWrEn		,
+		data			=> URd2HFfWrData	,
+		wrfull			=> open				,
+		wrusedw			=> URd2HFfWrCnt(6 downto 0),
+		
+		rdclk			=> HDMIUserClk		,
+		rdreq			=> URd2HFfRdEn		,
+		q				=> URd2HFfRdData	,
+		rdempty			=> URd2HFfEmpty		,
+		rdusedw			=> URd2HFfRdCnt(7 downto 0)
+	);
+	
+	-- HDMI Display interface
+	u_HDMI : HDMI
+	Port map
+	(
+		RstB			=> rSysRstB			,
+		Clk				=> UserClk			,
+		
+		HDMIReq			=> HDMIReq			,
+		HDMIBusy		=> HDMIBusy			,
+		HDMIStatus		=> HDMIStatus		,
+		HDMIUserClk		=> HDMIUserClk		,
+		
+		HDMIFfRdEn		=> URd2HFfRdEn		,
+		HDMIFfRdData	=> URd2HFfRdData(23 downto 0),
+		HDMIFfEmpty		=> URd2HFfEmpty		,
+		HDMIFfRdCnt		=> URd2HFfRdCnt		,
+		
+		HDMI_TX_INT		=> HDMI_TX_INT		,
+		HDMI_I2C_SCL	=> HDMI_I2C_SCL		,
+		HDMI_I2C_SDA	=> HDMI_I2C_SDA		,
+		
+		HDMI_TX_CLK		=> HDMI_TX_CLK		,
+		HDMI_TX_D		=> HDMI_TX_D		,
+		HDMI_TX_DE		=> HDMI_TX_DE		,
+		HDMI_TX_HS		=> HDMI_TX_HS		,
+		HDMI_TX_VS		=> HDMI_TX_VS
+	);
 	
 End Architecture rtl;
