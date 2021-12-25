@@ -95,7 +95,7 @@ begin
             if RstB = '0' then
                 rPixCnt <=  (others => '0');
             else
-                if rPixCnt = 786432 then
+                if rPixCnt = 786433 then
                     rPixCnt <=  (others => '0');
                 elsif rBmFfWrEn = '1' then
                     rPixCnt <=  rPixCnt + 1;
@@ -163,7 +163,7 @@ begin
                         end if ;
 
                     when stRdData   =>
-                        if rPixCnt = 786432 then
+                        if rPixCnt = 786433 then
                             rState  <=  stIdle;
                         else
                             rState  <=  stRdData;
