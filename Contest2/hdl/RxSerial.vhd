@@ -10,7 +10,6 @@ Port(
 	
 	SerDataIn	: in	std_logic;
 	
-	RxFfFull	: in	std_logic;
 	RxFfWrData	: out	std_logic_vector( 7 downto 0 );
 	RxFfWrEn	: out	std_logic
 );
@@ -22,8 +21,8 @@ Architecture rtl Of RxSerial Is
 -- Constant declaration
 ----------------------------------------------------------------------------------
 
-	constant	cBaudRate	:	integer	:=	868;
-	constant	cHalfBaudRate	:	integer	:=	434;
+	constant	cBaudRate	:	integer	:=	108;
+	constant	cHalfBaudRate	:	integer	:=	54;
 
 ----------------------------------------------------------------------------------
 -- Signal declaration
@@ -145,7 +144,7 @@ Begin
 		if rising_edge(Clk) then
 			if RstB = '0' then
 				rRxFfWrEn	<=	'0';
-			elsif rState = stLoad and RxFfFull = '0' then
+			elsif rState = stLoad then
 				rRxFfWrEn	<=	'1';
 			else
 				rRxFfWrEn	<=	'0';
