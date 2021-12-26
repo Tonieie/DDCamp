@@ -76,7 +76,7 @@ begin
     begin
         if rising_edge(Clk) then
             if RstB = '0' then
-                rRGBCnt   <=  "00";
+                rRGBCnt   <=  "11";
             else
                 if ( (rState = stHeader ) and (rHeaderCnt = 53) ) or rRGBCnt = 0 then
                     rRGBCnt     <=  "11";
