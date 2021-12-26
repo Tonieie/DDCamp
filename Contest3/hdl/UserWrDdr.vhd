@@ -86,9 +86,13 @@ Begin
 ----------------------------------------------------------------------------------
 
 	--Bypass
-	T2UWrFfRdEn		<=	rUWr2DFfRdEn;
-	UWr2DFfRdData( 63 downto 0 )	<=	rUWr2DFfRdData(63 downto 0);
-	UWr2DFfRdCnt( 15 downto 0 )		<=	rUWr2DffRdCnt( 15 downto 0 );
+	-- T2UWrFfRdEn		<=	rUWr2DFfRdEn;
+	-- UWr2DFfRdData( 63 downto 0 )	<=	rUWr2DFfRdData(63 downto 0);
+	-- UWr2DFfRdCnt( 15 downto 0 )		<=	rUWr2DffRdCnt( 15 downto 0 );
+
+	Ds2UWrFfRdEn		<=	UWr2DFfRdEn;
+	UWr2DFfRdData( 63 downto 0 )	<=	Ds2UwrFfRdData(63 downto 0);
+	UWr2DFfRdCnt( 15 downto 0 )		<=	Ds2UwrFfRdCnt( 15 downto 0 );
 	
 	MtDdrWrReq		<=	rMtDdrWrReq;
 	MtDdrWrAddr(28 downto 7)		<=	rMtDdrWrAddr(28 downto 7);
@@ -195,7 +199,7 @@ Begin
 						end if ;	
 					
 					when stCheckFf	=>
-						if T2UWrFfRdCnt( 15 downto 4 ) /= 0 then
+						if Ds2UWrFfRdCnt( 15 downto 4 ) /= 0 then
 							rState	<=	stReq;
 						else
 							rState	<=	stCheckFf;
