@@ -150,6 +150,19 @@ Architecture rtl Of Question2 Is
 	);
 	End Component RxSerial;
 	
+	Component DownScale is
+		port (
+			Clk             : in std_logic;
+			RstB            : in std_logic;
+
+			Bm2DsData       : in std_logic_vector(23 downto 0);
+			Bm2DsEn         : in std_logic;
+
+			Ds2DsFfData     : out std_logic_vector(23 downto 0);
+			Ds2DsFfEn       : out std_logic
+		);
+	end Component DownScale;
+	
 	Component UserWrDdr Is
 	Port
 	(
@@ -166,6 +179,11 @@ Architecture rtl Of Question2 Is
 		T2UWrFfRdEn		: out	std_logic;
 		T2UWrFfRdData	: in	std_logic_vector( 63 downto 0 );
 		T2UWrFfRdCnt	: in	std_logic_vector( 15 downto 0 );
+
+		-- Dwn2UWrFf I/F
+		Ds2UWrFfRdEn	: out	std_logic;
+		Ds2UWrFfRdData	: in	std_logic_vector( 63 downto 0 );
+		Ds2UWrFfRdCnt	: in	std_logic_vector( 15 downto 0 );
 		
 		-- UWr2DFf I/F
 		UWr2DFfRdEn		: in	std_logic;
@@ -313,6 +331,13 @@ Architecture rtl Of Question2 Is
 	--RxSerial
 	signal	Rx2BWrData		: std_logic_vector(7 downto 0);
 	signal	Rx2BWrEn		: std_logic;
+
+	--DownScale
+	signal	Ds2DsFfEn		: std_logic;
+	signal	Ds2DsFfData		: std_logic_vector(31 downto 0);
+	signal	Ds2UWrFfRdEn	: std_logic;
+	signal	Ds2UWrFfRdData	: std_logic_vector(63 downto 0);
+	signal	Ds2UWrFfRdCnt	: std_logic_vector( 15 downto 0 );
 	
 	-- UWr2DFf
 	signal	UWr2DFfRdEn		: std_logic;
@@ -440,6 +465,38 @@ Begin
 		RxFfWrData	=> Rx2BWrData(7 downto 0)	,
 		RxFfWrEn	=> Rx2BWrEn
 	);
+
+	--TestPatt -> DownScale -> DsFf -> UserWrDdr -> MtDdr
+	u_DownScale : DownScale
+	Port map
+	(
+        Clk             => UserClk	,
+        RstB            => SysRst	,
+
+        Bm2DsEn			=> B2UWrFfWrEn	,
+        Bm2DsData		=> B2UWrFfWrData(23 downto 0)	,
+		
+        Ds2DsFfData     => Ds2DsFfData(23 downto 0)	,
+        Ds2DsFfEn       => Ds2DsFfEn	
+	);
+
+	u_DsFf : fifo256x32to64
+	Port map
+	(
+		aclr			=> SysRst			,
+		
+		wrclk			=> UserClk			,
+		wrreq			=> Ds2DsFfEn		,
+		data			=> Ds2DsFfData		,
+		wrfull			=> open				,
+		wrusedw			=> open				,
+		
+		rdclk			=> UserClk			,
+		rdreq			=> Ds2UWrFfRdEn		,
+		q				=> Ds2UWrFfRdData	,
+		rdempty			=> open				,
+		rdusedw			=> Ds2UWrFfRdCnt(6 downto 0)
+	);
 	
 	-- Fifo TestPatt -> UserWrDdr -> MtDdr
 	u_T2UWrFf : fifo256x32to64
@@ -476,6 +533,11 @@ Begin
 		T2UWrFfRdEn		=> B2UWrFfRdEn		,
 		T2UWrFfRdData	=> B2UWrFfRdData	,
 		T2UWrFfRdCnt	=> B2UWrFfRdCnt		,
+
+		-- Dwn2UWrFf I/F
+		Ds2UWrFfRdEn	=> Ds2UWrFfRdEn		,
+		Ds2UWrFfRdData	=> Ds2UWrFfRdData	,
+		Ds2UWrFfRdCnt	=> Ds2UWrFfRdCnt	,
 
 		-- UWr2DFf I/F
 		UWr2DFfRdEn		=> UWr2DFfRdEn		,

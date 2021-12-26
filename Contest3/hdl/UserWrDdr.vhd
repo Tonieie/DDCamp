@@ -38,9 +38,9 @@ Entity UserWrDdr Is
 		T2UWrFfRdCnt	: in	std_logic_vector( 15 downto 0 );
 
 		-- Dwn2UWrFf I/F
-		Dwn2UWrFfRdEn	: out	std_logic;
-		Dwn2UWrFfRdData	: in	std_logic_vector( 63 downto 0 );
-		Dwn2UWrFfRdCnt	: in	std_logic_vector( 15 downto 0 );
+		Ds2UWrFfRdEn	: out	std_logic;
+		Ds2UWrFfRdData	: in	std_logic_vector( 63 downto 0 );
+		Ds2UWrFfRdCnt	: in	std_logic_vector( 15 downto 0 );
 		
 		-- UWr2DFf I/F
 		UWr2DFfRdEn		: in	std_logic;
@@ -87,7 +87,7 @@ Begin
 
 	--Bypass
 	T2UWrFfRdEn		<=	rUWr2DFfRdEn;
-	UWr2DFfRdData( 63 downto 0 )	<=	rUWr2DFfRdData(63 downto 0)
+	UWr2DFfRdData( 63 downto 0 )	<=	rUWr2DFfRdData(63 downto 0);
 	UWr2DFfRdCnt( 15 downto 0 )		<=	rUWr2DffRdCnt( 15 downto 0 );
 	
 	MtDdrWrReq		<=	rMtDdrWrReq;
