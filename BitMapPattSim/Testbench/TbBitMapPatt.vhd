@@ -44,6 +44,19 @@ Architecture HTWTestBench Of TbBitMapPatt Is
         RxFfWrEn	: out	std_logic
     );
     End Component RxSerial;
+
+	Component DownScale is
+		port (
+			Clk             : in std_logic;
+			RstB            : in std_logic;
+
+			Bm2DsData       : in std_logic_vector(23 downto 0);
+			Bm2DsEn         : in std_logic;
+
+			Ds2DsFfData     : out std_logic_vector(23 downto 0);
+			Ds2DsFfEn       : out std_logic
+		);
+	end Component DownScale;
 	
 -------------------------------------------------------------------------
 -- Signal Declaration
@@ -61,6 +74,9 @@ Architecture HTWTestBench Of TbBitMapPatt Is
     signal  BmFfWrEn    : std_logic;
     signal  BmFfWrData  : std_logic_vector(23 downto 0);
     signal  BmFfWrCnt   : std_logic_vector(7 downto 0);
+
+	signal	Ds2DsFfData	: std_logic_vector(23 downto 0);
+	signal	Ds2DsFfEn	: std_logic;
 
     --Rxserial
 	signal	SerDataIn	: std_logic;
@@ -111,6 +127,18 @@ Begin
 		RxFfWrEn	=> RxBmWrEn	
 	);
 	
+	u_DownScale : DownScale
+		port map (
+			Clk             => Clk			,
+			RstB            => RstB			,
+
+			Bm2DsData       => BmFfWrData	,
+			Bm2DsEn         => BmFfWrEn		,
+
+			Ds2DsFfData     => Ds2DsFfData	,
+			Ds2DsFfEn       => Ds2DsFfEn		
+		);
+
 -------------------------------------------------------------------------
 -- Testbench
 -------------------------------------------------------------------------
@@ -125,7 +153,7 @@ Begin
 		Report "TM=" & integer'image(TM); 
 
 		SerDataIn	<= '1';
-		wait for 30*tClk;
+		wait for 100*tClk;
 
 		-------------------------------------------
 		-- TM=1 : Check counter value

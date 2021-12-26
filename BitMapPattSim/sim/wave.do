@@ -13,8 +13,12 @@ add wave -noupdate -radix unsigned /tbbitmappatt/u_BitMapPatt/rHeaderCnt
 add wave -noupdate /tbbitmappatt/u_BitMapPatt/rBmFfWrEn
 add wave -noupdate -radix hexadecimal /tbbitmappatt/u_BitMapPatt/rBmFfWrData
 add wave -noupdate /tbbitmappatt/u_BitMapPatt/rRGBCnt
+add wave -noupdate /tbbitmappatt/u_DownScale/rPixCnt
+add wave -noupdate /tbbitmappatt/u_DownScale/rRowCnt
+add wave -noupdate /tbbitmappatt/u_DownScale/rState
+add wave -noupdate /tbbitmappatt/u_DownScale/rDs2DsFfEn
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {537449300 ps} 0}
+WaveRestoreCursors {{Cursor 1} {272048500 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 150
 configure wave -valuecolwidth 100

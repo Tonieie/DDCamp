@@ -7,6 +7,7 @@ vlib work
 #--------------------------------#
 vcom -work work ../source/BitMapPatt.vhd
 vcom -work work ../source/RxSerial.vhd
+vcom -work work ../source/DownScale.vhd
 
 #--------------------------------#
 #--     Compile Test Bench     --#
