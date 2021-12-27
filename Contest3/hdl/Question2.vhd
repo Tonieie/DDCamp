@@ -504,23 +504,23 @@ Begin
 	Ds2UWrFfRdCnt(15 downto 7)	<=	(others => '0');
 
 	-- Fifo TestPatt -> UserWrDdr -> MtDdr
-	-- u_T2UWrFf : fifo256x32to64
-	-- Port map
-	-- (
-	-- 	aclr			=> SysRst			,
+	u_T2UWrFf : fifo256x32to64
+	Port map
+	(
+		aclr			=> SysRst			,
 		
-	-- 	wrclk			=> UserClk			,
-	-- 	wrreq			=> B2UWrFfWrEn		,
-	-- 	data			=> B2UWrFfWrData	,
-	-- 	wrfull			=> open				,
-	-- 	wrusedw			=> B2UWrFfWrCnt(7 downto 0),
+		wrclk			=> UserClk			,
+		wrreq			=> B2UWrFfWrEn		,
+		data			=> B2UWrFfWrData	,
+		wrfull			=> open				,
+		wrusedw			=> B2UWrFfWrCnt(7 downto 0),
 		
-	-- 	rdclk			=> UserClk			,
-	-- 	rdreq			=> B2UWrFfRdEn		,
-	-- 	q				=> B2UWrFfRdData	,
-	-- 	rdempty			=> open				,
-	-- 	rdusedw			=> B2UWrFfRdCnt(6 downto 0)
-	-- );
+		rdclk			=> UserClk			,
+		rdreq			=> B2UWrFfRdEn		,
+		q				=> B2UWrFfRdData	,
+		rdempty			=> open				,
+		rdusedw			=> B2UWrFfRdCnt(6 downto 0)
+	);
 	
 	u_UserWrDdr : UserWrDdr
 	Port map
