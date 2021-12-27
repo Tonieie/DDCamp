@@ -65,6 +65,9 @@ Architecture rtl Of UserWrDdr Is
 	signal	rMtDdrWrReq		: std_logic;
 	signal	rMtDdrWrAddr	: std_logic_vector(28 downto 7);
 
+	signal	rMtDdrWrAddrDs	: std_logic_vector(28 downto 7);
+	signal	rMtDdrWrAddrNm	: std_logic_vector(28 downto 7);
+
 	type	UserWrStateType	is
 		(
 			stInit		,
@@ -74,11 +77,18 @@ Architecture rtl Of UserWrDdr Is
 		);
 	signal	rState			: UserWrStateType;
 
-	signal rRowReqCnt		: std_logic_vector(2 downto 0);
+	signal rRowDsReqCnt		: std_logic_vector(2 downto 0);
+	signal rRowNmReqCnt		: std_logic_vector(4 downto 0);
 
 	signal rUWr2DFfRdData	: std_logic_vector(63 downto 0);
 	signal rUWr2DFfRdCnt	: std_logic_vector(15 downto 0);
-	signal rUWr2DFfRdEn		: std_logic;
+
+	signal rDs2UWrFfRdEn	: std_logic;
+	signal rT2UWrFfRdEn		: std_logic;
+
+	--Select signal for selecting between Normal ('0') or DownScale ('1')
+	signal rSelIn			: std_logic;
+
 Begin
 
 ----------------------------------------------------------------------------------
@@ -90,9 +100,11 @@ Begin
 	-- UWr2DFfRdData( 63 downto 0 )	<=	rUWr2DFfRdData(63 downto 0);
 	-- UWr2DFfRdCnt( 15 downto 0 )		<=	rUWr2DffRdCnt( 15 downto 0 );
 
-	Ds2UWrFfRdEn		<=	UWr2DFfRdEn;
-	UWr2DFfRdData( 63 downto 0 )	<=	Ds2UwrFfRdData(63 downto 0);
-	UWr2DFfRdCnt( 15 downto 0 )		<=	Ds2UwrFfRdCnt( 15 downto 0 );
+	Ds2UWrFfRdEn	<=	rDs2UWrFfRdEn;
+	T2UWrFfRdEn		<=	rT2UWrFfRdEn;
+
+	UWr2DFfRdData(63 downto 0)	<=	rUWr2DFfRdData(63 downto 0);
+	UWr2DFfRdCnt(15 downto 0)	<=	rUWr2DFfRdCnt(15 downto 0);
 	
 	MtDdrWrReq		<=	rMtDdrWrReq;
 	MtDdrWrAddr(28 downto 7)		<=	rMtDdrWrAddr(28 downto 7);
@@ -128,56 +140,167 @@ Begin
 		end if;
 	end process u_rMtDdrWrReq;
 
-	u_rMtDdrWrAddr: process(Clk)
+	u_rMtDdrWrAddrNm: process(Clk)
 	begin
 		if rising_edge(Clk) then
 			if RstB = '0' then
 				-- start at addr = 24544 (last row first col which is the first received pixcel's addr)
-				rMtDdrWrAddr(28 downto 7)	<=	"00" & x"05FF8";
+				rMtDdrWrAddrNm(28 downto 7)	<=	"00" & x"05FE0";
 			else
-				if( (rState = stWtMtDone) and (MtDdrWrBusy = '0') ) then
+				if( (rSelIn = '0') and (rState = stWtMtDone) and (MtDdrWrBusy = '0') ) then
 					-- check if reached first row last col
-					if rMtDdrWrAddr(26 downto 7) = 18431 then
-						rMtDdrWrAddr(28 downto 27)	<= rMtDdrWrAddr(28 downto 27) + 1;
-						rMtDdrWrAddr(26 downto 7)	<= x"05FF8";
+					if rMtDdrWrAddrNm(26 downto 7) = 31 then
+						if rMtDdrWrAddrNm(28 downto 27) = "01" then
+							rMtDdrWrAddrNm(28 downto 27)	<=	"00";
+						else
+							rMtDdrWrAddrNm(28 downto 27)	<=	"01";
+						end if ;
+						rMtDdrWrAddrNm(26 downto 7)	<= x"05FE0";
 					-- if writen to the last col then go back to the upper line
-					elsif rRowReqCnt = 7 then
-						rMtDdrWrAddr(28 downto 7)	<= rMtDdrWrAddr(28 downto 7) - 39;
+					elsif rRowNmReqCnt = 31 then
+						rMtDdrWrAddrNm(28 downto 7)	<= rMtDdrWrAddrNm(28 downto 7) - 63;
 					else
-						rMtDdrWrAddr(28 downto 7)	<= rMtDdrWrAddr(28 downto 7) + 1;
+						rMtDdrWrAddrNm(28 downto 7)	<= rMtDdrWrAddrNm(28 downto 7) + 1;
 					end if ;
 				else
-					rMtDdrWrAddr(28 downto 7)	<= rMtDdrWrAddr(28 downto 7);
+					rMtDdrWrAddrNm(28 downto 7)	<= rMtDdrWrAddrNm(28 downto 7);
 				end if;
 			end if;
 		end if;
+	end process u_rMtDdrWrAddrNm;
+	
+	u_rMtDdrWrAddrDs: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				-- start at addr = 24544 (last row first col which is the first received pixcel's addr)
+				rMtDdrWrAddrDs(28 downto 7)	<=	"10" & x"05FF8";
+			else
+				if( (rSelIn = '1') and (rState = stWtMtDone) and (MtDdrWrBusy = '0') ) then
+					-- check if reached first row last col
+					if rMtDdrWrAddrDs(26 downto 7) = 18431 then
+						if rMtDdrWrAddrDs(28 downto 27) = "11" then
+							rMtDdrWrAddrDs(28 downto 27)	<=	"10";
+						else
+							rMtDdrWrAddrDs(28 downto 27)	<=	"11";
+						end if ;
+						rMtDdrWrAddrDs(26 downto 7)	<= x"05FF8";
+					-- if writen to the last col then go back to the upper line
+					elsif rRowDsReqCnt = 7 then
+						rMtDdrWrAddrDs(28 downto 7)	<= rMtDdrWrAddrDs(28 downto 7) - 39;
+					else
+						rMtDdrWrAddrDs(28 downto 7)	<= rMtDdrWrAddrDs(28 downto 7) + 1;
+					end if ;
+				else
+					rMtDdrWrAddrDs(28 downto 7)	<= rMtDdrWrAddrDs(28 downto 7);
+				end if;
+			end if;
+		end if;
+	end process u_rMtDdrWrAddrDs;
+
+	u_rMtDdrWrAddr: process(Clk)
+	begin
+			if rSelIn = '1' then
+				rMtDdrWrAddr(28 downto 7)	<=	rMtDdrWrAddrDs(28 downto 7);
+			else
+				rMtDdrWrAddr(28 downto 7)	<=	rMtDdrWrAddrNm(28 downto 7);
+			end if ;
 	end process u_rMtDdrWrAddr;
 
-	u_rUWr2DFfRdEn: process(Clk)
+	u_rUWr2DFfRdData: process(Clk)
 	begin
-		if rising_edge(Clk) then
-			if RstB = '0' then
-				
+			if rSelIn = '1' then
+				rUWr2DFfRdData(63 downto 0)	<=	Ds2UWrFfRdData(63 downto 0);
 			else
-				
-			end if;
-		end if;
-	end process u_rUWr2DFfRdEn;
+				rUWr2DFfRdData(63 downto 0)	<=	T2UWrFfRdData(63 downto 0);
+			end if ;
+	end process u_rUWr2DFfRdData;
 
-	u_rRowReqCnt: process(Clk)
+	u_rUWr2DFfRdCnt: process(Clk)
+	begin
+			if rSelIn = '1' then
+				rUWr2DFfRdCnt(15 downto 0)	<=	Ds2UWrFfRdCnt(15 downto 0);
+			else
+				rUWr2DFfRdCnt(15 downto 0)	<=	T2UWrFfRdCnt(15 downto 0);
+			end if ;
+	end process u_rUWr2DFfRdCnt;
+
+	u_rDs2UWrFfRdEn: process(Clk)
+	begin
+			if RstB = '0' then
+				rDs2UWrFfRdEn	<=	'0';
+			else
+				if rSelIn = '1' then
+					rDs2UWrFfRdEn	<=	UWr2DFfRdEn;
+				else
+					rDs2UWrFfRdEn	<=	'0';
+				end if ;
+			end if;
+	end process u_rDs2UWrFfRdEn;
+
+	u_rT2UWrFfRdEn: process(Clk)
+	begin
+			if RstB = '0' then
+				rT2UWrFfRdEn	<=	'0';
+			else
+				if rSelIn = '0' then
+					rT2UWrFfRdEn	<=	UWr2DFfRdEn;
+				else
+					rT2UWrFfRdEn	<=	'0';
+				end if ;
+			end if;
+	end process u_rT2UWrFfRdEn;
+
+	u_rRowNmReqCnt: process(Clk)
 	begin
 		if rising_edge(Clk) then
 			if RstB = '0' then
-				rRowReqCnt	<=	(others => '0');
+				rRowNmReqCnt	<=	(others => '0');
 			else
-				if( (rState = stWtMtDone) and (MtDdrWrBusy = '0') ) then
-					rRowReqCnt	<=	rRowReqCnt + 1;
+				if( (rSelIn = '0') and (rState = stWtMtDone) and (MtDdrWrBusy = '0') ) then
+					rRowNmReqCnt	<=	rRowNmReqCnt + 1;
 				else
-					rRowReqCnt	<=	rRowReqCnt;
+					rRowNmReqCnt	<=	rRowNmReqCnt;
 				end if;
 			end if;
 		end if;
-	end process u_rRowReqCnt;
+	end process u_rRowNmReqCnt;
+
+	u_rRowDsReqCnt: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				rRowDsReqCnt	<=	(others => '0');
+			else
+				if( (rSelIn = '1') and (rState = stWtMtDone) and (MtDdrWrBusy = '0') ) then
+					rRowDsReqCnt	<=	rRowDsReqCnt + 1;
+				else
+					rRowDsReqCnt	<=	rRowDsReqCnt;
+				end if;
+			end if;
+		end if;
+	end process u_rRowDsReqCnt;
+
+	u_rSelIn: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				rSelIn <= '0';
+			else
+				if rState = stCheckFf then
+					if Ds2UWrFfRdCnt( 15 downto 4 ) /= 0 then
+						rSelIn <= '1';
+					elsif T2UWrFfRdCnt( 15 downto 4 ) /= 0 then
+						rSelIn <= '0';
+					else
+						rSelIn <= rSelIn;
+					end if ;
+				else
+					rSelIn <= rSelIn;
+				end if;
+			end if;
+		end if;
+	end process u_rSelIn;
 
 ----------------------------------------------------------------------------------
 -- State Machine 
@@ -199,7 +322,7 @@ Begin
 						end if ;	
 					
 					when stCheckFf	=>
-						if Ds2UWrFfRdCnt( 15 downto 4 ) /= 0 then
+						if ( ( T2UWrFfRdCnt( 15 downto 4 ) /= 0 ) or ( Ds2UWrFfRdCnt( 15 downto 4 ) /= 0 ) ) then
 							rState	<=	stReq;
 						else
 							rState	<=	stCheckFf;
