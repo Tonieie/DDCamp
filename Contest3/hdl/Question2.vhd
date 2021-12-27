@@ -335,6 +335,7 @@ Architecture rtl Of Question2 Is
 	--DownScale
 	signal	Ds2DsFfEn		: std_logic;
 	signal	Ds2DsFfData		: std_logic_vector(31 downto 0);
+	signal	Ds2UWrFfWrCnt	: std_logic_vector( 15 downto 0 );
 	signal	Ds2UWrFfRdEn	: std_logic;
 	signal	Ds2UWrFfRdData	: std_logic_vector(63 downto 0);
 	signal	Ds2UWrFfRdCnt	: std_logic_vector( 15 downto 0 );
@@ -471,7 +472,7 @@ Begin
 	Port map
 	(
         Clk             => UserClk	,
-        RstB            => SysRst	,
+        RstB            => rSysRstB	,
 
         Bm2DsEn			=> B2UWrFfWrEn	,
         Bm2DsData		=> B2UWrFfWrData(23 downto 0)	,
@@ -489,7 +490,7 @@ Begin
 		wrreq			=> Ds2DsFfEn		,
 		data			=> Ds2DsFfData		,
 		wrfull			=> open				,
-		wrusedw			=> open				,
+		wrusedw			=> Ds2UWrFfWrCnt(7 downto 0),
 		
 		rdclk			=> UserClk			,
 		rdreq			=> Ds2UWrFfRdEn		,
@@ -497,25 +498,29 @@ Begin
 		rdempty			=> open				,
 		rdusedw			=> Ds2UWrFfRdCnt(6 downto 0)
 	);
-	
+	Ds2DsFfData(31 downto 24)	<= (others=>'0');
+
+	Ds2UWrFfWrCnt(15 downto 8)	<=	(others => '1');
+	Ds2UWrFfRdCnt(15 downto 7)	<=	(others => '0');
+
 	-- Fifo TestPatt -> UserWrDdr -> MtDdr
-	u_T2UWrFf : fifo256x32to64
-	Port map
-	(
-		aclr			=> SysRst			,
+	-- u_T2UWrFf : fifo256x32to64
+	-- Port map
+	-- (
+	-- 	aclr			=> SysRst			,
 		
-		wrclk			=> UserClk			,
-		wrreq			=> B2UWrFfWrEn		,
-		data			=> B2UWrFfWrData	,
-		wrfull			=> open				,
-		wrusedw			=> B2UWrFfWrCnt(7 downto 0),
+	-- 	wrclk			=> UserClk			,
+	-- 	wrreq			=> B2UWrFfWrEn		,
+	-- 	data			=> B2UWrFfWrData	,
+	-- 	wrfull			=> open				,
+	-- 	wrusedw			=> B2UWrFfWrCnt(7 downto 0),
 		
-		rdclk			=> UserClk			,
-		rdreq			=> B2UWrFfRdEn		,
-		q				=> B2UWrFfRdData	,
-		rdempty			=> open				,
-		rdusedw			=> B2UWrFfRdCnt(6 downto 0)
-	);
+	-- 	rdclk			=> UserClk			,
+	-- 	rdreq			=> B2UWrFfRdEn		,
+	-- 	q				=> B2UWrFfRdData	,
+	-- 	rdempty			=> open				,
+	-- 	rdusedw			=> B2UWrFfRdCnt(6 downto 0)
+	-- );
 	
 	u_UserWrDdr : UserWrDdr
 	Port map
