@@ -8,3 +8,4 @@
 *.csv
 *.stp
 *.bmp
+**/greybox_tmp/**
