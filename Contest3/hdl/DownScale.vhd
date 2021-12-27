@@ -149,7 +149,7 @@ begin
                         
                     when stIgnoreRow =>
                         if rRowCnt = 0 then
-                            rState  <=  stRecv;
+                            rState  <=  stIgnorePix;
                         else
                             rState  <=  stIgnoreRow;
                         end if ;
