@@ -74,7 +74,7 @@ Architecture rtl Of UserWrDdr Is
 		);
 	signal	rState			: UserWrStateType;
 
-	signal rRowReqCnt		: std_logic_vector(4 downto 0);
+	signal rRowReqCnt		: std_logic_vector(2 downto 0);
 
 	signal rUWr2DFfRdData	: std_logic_vector(63 downto 0);
 	signal rUWr2DFfRdCnt	: std_logic_vector(15 downto 0);
@@ -133,16 +133,16 @@ Begin
 		if rising_edge(Clk) then
 			if RstB = '0' then
 				-- start at addr = 24544 (last row first col which is the first received pixcel's addr)
-				rMtDdrWrAddr(28 downto 7)	<=	"00" & x"05FE0";
+				rMtDdrWrAddr(28 downto 7)	<=	"00" & x"05FF8";
 			else
 				if( (rState = stWtMtDone) and (MtDdrWrBusy = '0') ) then
 					-- check if reached first row last col
-					if rMtDdrWrAddr(26 downto 7) = 31 then
+					if rMtDdrWrAddr(26 downto 7) = 18431 then
 						rMtDdrWrAddr(28 downto 27)	<= rMtDdrWrAddr(28 downto 27) + 1;
-						rMtDdrWrAddr(26 downto 7)	<= x"05FE0";
+						rMtDdrWrAddr(26 downto 7)	<= x"05FF8";
 					-- if writen to the last col then go back to the upper line
-					elsif rRowReqCnt = 31 then
-						rMtDdrWrAddr(28 downto 7)	<= rMtDdrWrAddr(28 downto 7) - 63;
+					elsif rRowReqCnt = 7 then
+						rMtDdrWrAddr(28 downto 7)	<= rMtDdrWrAddr(28 downto 7) - 39;
 					else
 						rMtDdrWrAddr(28 downto 7)	<= rMtDdrWrAddr(28 downto 7) + 1;
 					end if ;
