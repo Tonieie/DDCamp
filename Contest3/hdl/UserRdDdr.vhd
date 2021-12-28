@@ -152,7 +152,7 @@ Begin
 				if( (rState = stWtMtDone) and (MtDdrRdBusy = '0') ) then
 					if DipSwitch(1) = '1' then
 
-						if ( ( rMtDdrRdAddr(23 downto 12) >= 575 ) and ( rMtDdrRdAddr(11 downto 10) = "11" ) ) then
+						if ( ( rMtDdrRdAddr(22 downto 12) >= 576 ) and ( rMtDdrRdAddr(11 downto 7) >= 23) and ( rMtDdrRdAddr(11 downto 7) /= 31 )) then
 							rMtDdrRdAddr(28)	<= '1';
 							rMtDdrRdAddr(27)	<= not(DipSwitch(0));
 						else
@@ -160,24 +160,21 @@ Begin
 							rMtDdrRdAddr(27)	<= DipSwitch(0);
 						end if ;
 
-						if rMtDdrRdAddr(21 downto 7) = 24575 then
-							rMtDdrRdAddr(26 downto 7)	<= (others => '0');
-						else
-							rMtDdrRdAddr(26 downto 7)	<= rMtDdrRdAddr(26 downto 7) + 1;
-						end if ;
-
 					else
-						-- check if all picxels have been read
-						if rMtDdrRdAddr(21 downto 7) = 24575 then
-							rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
-							rMtDdrRdAddr(26 downto 7)	<= (others => '0');
-						else
-							rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) + 1;
-						end if ;
+						rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
 					end if;
+
+					-- check if all picxels have been read
+					if rMtDdrRdAddr(26 downto 7) = 24575 then
+						rMtDdrRdAddr(26 downto 7)	<= (others => '0');
+					else
+						rMtDdrRdAddr(26 downto 7)	<= rMtDdrRdAddr(26 downto 7) + 1;
+					end if ;
+
 				else
 					rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7);
 				end if;
+
 			end if;
 		end if;
 	end process u_rMtDdrRdAddr;
