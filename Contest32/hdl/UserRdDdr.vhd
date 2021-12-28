@@ -55,7 +55,12 @@ Architecture rtl Of UserRdDdr Is
 ----------------------------------------------------------------------------------
 -- Component declaration
 ----------------------------------------------------------------------------------
-	
+
+----------------------------------------------------------------------------------
+-- Constant
+----------------------------------------------------------------------------------
+	constant	cEndPicAddrOffset	:	integer	:=	24479;
+	constant	cEndColAddrOffset	:	integer	:=	31;
 	
 ----------------------------------------------------------------------------------
 -- Signal declaration
@@ -79,6 +84,16 @@ Architecture rtl Of UserRdDdr Is
 	signal	rColCnt			: std_logic_vector(9 downto 0);
 
 	signal	rRdRowCnt		: std_logic_vector(1 downto 0);
+
+	--DipSwitch Signal
+	signal	rDipSw0Cnt		: std_logic_vector(1 downto 0);
+	signal	rDipSw1Cnt		: std_logic_vector(1 downto 0);
+	signal	rDipSw0			: std_logic_vector(1 downto 0);
+	signal	rDipSw1			: std_logic_vector(1 downto 0);
+
+	signal	rRowStartAddr	: std_logic_vector(23 downto 7);
+	signal	rColStartAddr	: std_logic_vector(13 downto 7);
+	signal	rStartAddr		: std_logic_vector(24 downto 7);
 	
 Begin
 
@@ -148,14 +163,12 @@ Begin
 	begin
 		if rising_edge(Clk) then
 			if RstB = '0' then
-				rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
-				rMtDdrRdAddr(26 downto 7)	<=	(others => '0');
+				rMtDdrRdAddr(28 downto 7)	<= "0000" & rStartAddr(24 downto 7);
 			else
 				if( (rState = stWtMtDone) and (MtDdrRdBusy = '0') ) then
-					if ( rMtDdrRdAddr(26 downto 7) = (x"05F9F") ) and ( rRdRowCnt = 3 ) then
-						rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
-						rMtDdrRdAddr(26 downto 7)	<= (others => '0');
-					elsif rMtDdrRdAddr(11 downto 7) = 31 then
+					if ( rMtDdrRdAddr(26 downto 7) = (rStartAddr(24 downto 7) + cEndPicAddrOffset) ) and ( rRdRowCnt = 3 ) then
+						rMtDdrRdAddr(28 downto 7)	<= "0000" & rStartAddr(24 downto 7);
+					elsif rMtDdrRdAddr(13 downto 7) = ( rColStartAddr(13 downto 7) + cEndColAddrOffset ) then
 						if rRdRowCnt = 3 then
                             rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) + 97;
 						else
@@ -178,7 +191,7 @@ Begin
 			if RstB = '0' then
 				rRdRowCnt	<=	"00";
 			else
-				if (rState = stWtMtDone) and (MtDdrRdBusy = '0') and (rMtDdrRdAddr(11 downto 7) = 31) then
+				if (rState = stWtMtDone) and (MtDdrRdBusy = '0') and ( rMtDdrRdAddr(13 downto 7) = rColStartAddr(13 downto 7) + cEndColAddrOffset ) then
 					rRdRowCnt	<=	rRdRowCnt + 1;
 				else
 					rRdRowCnt	<=	rRdRowCnt;
@@ -186,6 +199,128 @@ Begin
 			end if;
 		end if;
 	end process u_rRdRowCnt;
+
+----------------------------------------------------------------------------------
+-- DipSwitch Counting 
+----------------------------------------------------------------------------------
+	u_rDipSw0: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				rDipSw0(1 downto 0)	<=	DipSwitch(0) & DipSwitch(0);
+			else
+				rDipSw0(1 downto 0)	<=	rDipSw0(0) & DipSwitch(0);
+			end if;
+		end if;
+	end process u_rDipSw0;
+
+	u_rDipSw1: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				rDipSw1(1 downto 0)	<=	DipSwitch(1) & DipSwitch(1);
+			else
+				rDipSw1(1 downto 0) 	<=	rDipSw1(0) & DipSwitch(1);
+			end if;
+		end if;
+	end process u_rDipSw1;
+
+	u_rDipSw0Cnt: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				rDipSw0Cnt	<=	"00";
+			else
+				--detect rising edge
+				if rDipSw0(1 downto 0) = "01" then
+					rDipSw0Cnt	<=	rDipSw0Cnt + 1;
+				else
+					rDipSw0Cnt	<=	rDipSw0Cnt;
+				end if;
+			end if;
+		end if;
+	end process u_rDipSw0Cnt;
+
+	u_rDipSw1Cnt: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				rDipSw1Cnt	<=	"00";
+			else
+				--detect rising edge
+				if rDipSw1(1 downto 0) = "01" then
+					rDipSw1Cnt	<=	rDipSw1Cnt + 1;
+				else
+					rDipSw1Cnt	<=	rDipSw1Cnt;
+				end if;
+			end if;
+		end if;
+	end process u_rDipSw1Cnt;
+
+----------------------------------------------------------------------------------
+-- Start Address Signals
+----------------------------------------------------------------------------------
+
+	u_rColStartAddr: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				rColStartAddr(13 downto 7)	<=	(others => '0');
+			else
+				case( rDipSw0Cnt ) is
+				
+					when "01" =>
+						rColStartAddr(13 downto 7)	<=	conv_std_logic_vector(32,7);
+
+					when "10" =>
+						rColStartAddr(13 downto 7)	<=	conv_std_logic_vector(64,7);
+				
+					when "11" =>
+						rColStartAddr(13 downto 7)	<=	conv_std_logic_vector(96,7);
+
+					when others =>
+						rColStartAddr(13 downto 7)	<=	(others => '0');
+
+				end case ;
+			end if;
+		end if;
+	end process u_rColStartAddr;
+
+	u_rRowStartAddr: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				rRowStartAddr(23 downto 7)	<=	(others => '0');
+			else
+				case( rDipSw1Cnt ) is
+				
+					when "01" =>
+						rRowStartAddr(23 downto 7)	<=	conv_std_logic_vector(24576,17);
+
+					when "10" =>
+						rRowStartAddr(23 downto 7)	<=	conv_std_logic_vector(49152,17);
+				
+					when "11" =>
+						rRowStartAddr(23 downto 7)	<=	conv_std_logic_vector(73728,17);
+
+					when others =>
+						rRowStartAddr(23 downto 7)	<=	(others => '0');
+
+				end case ;
+			end if;
+		end if;
+	end process u_rRowStartAddr;
+
+	u_rStartAddr: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				rStartAddr(24 downto 7)	<=	(others => '0');
+			else
+				rStartAddr(24 downto 7)	<=	('0' & rRowStartAddr(23 downto 7)) + rColStartAddr(13 downto 7);
+			end if;
+		end if;
+	end process u_rStartAddr;
 
 
 ----------------------------------------------------------------------------------
