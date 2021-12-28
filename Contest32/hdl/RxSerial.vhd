@@ -20,8 +20,9 @@ Architecture rtl Of RxSerial Is
 ----------------------------------------------------------------------------------
 -- Constant declaration
 ----------------------------------------------------------------------------------
-
+	--Clock 100 MHz Baudrate = 921600
 	constant	cBaudRate	:	integer	:=	108;
+	-- for delay half baurate to sampling at center of data
 	constant	cHalfBaudRate	:	integer	:=	54;
 
 ----------------------------------------------------------------------------------
@@ -78,6 +79,7 @@ Begin
 		end if;
 	end process u_rBaudCnt;
 
+	-- count every baudrate period
 	u_rBaudEnd: process(Clk)
 	begin
 		if rising_edge(Clk) then
@@ -91,6 +93,7 @@ Begin
 		end if;
 	end process u_rBaudEnd;
 
+	-- count every received byte of data
 	u_rDataCnt: process(Clk)
 	begin
 		if rising_edge(Clk) then
@@ -98,11 +101,13 @@ Begin
 				rDataCnt <= (others => '0');
 			else
 				if rBaudEnd = '1' then
+					-- reset
 					if rDataCnt = 7 then
 						rDataCnt <= (others => '0');
 					else
 						rDataCnt <= rDataCnt + 1;
 					end if ;
+				--reset on start state
 				elsif rState = stStart then
 					rDataCnt <= (others => '0');
 				else
@@ -112,10 +117,6 @@ Begin
 		end if;
 	end process u_rDataCnt;
 
-	------------------------------
-	--	Shift Register
-	------------------------------
-
 	u_rSerDataIn : Process (Clk) Is
 	Begin
 		if ( rising_edge(Clk) ) then
@@ -123,6 +124,11 @@ Begin
 		end if;
 	End Process u_rSerDataIn;
 
+	------------------------------
+	--	Shift Register
+	------------------------------
+
+	-- every baudrate period shift left new received bit to data byte
 	u_rRxFfWrData: process(Clk)
 	begin
 		if rising_edge(Clk) then
@@ -151,6 +157,7 @@ Begin
 			end if;
 		end if;
 	end process u_rRxFfWrEn;
+
 	------------------------------
 	--	State Machine
 	------------------------------
@@ -163,6 +170,7 @@ Begin
 			else
 				case rState is
 					when stIdle =>
+						-- Idle until received '0' (Start bit)
 						if rSerDataIn = '0' then
 							rState <= stStart;
 						else
@@ -170,6 +178,7 @@ Begin
 						end if;
 					
 					when stStart =>
+						-- wait until center of start bit
 						if rBaudCnt = conv_std_logic_vector(cHalfBaudRate,10) then
 							rState <= stData;
 						else
@@ -177,6 +186,7 @@ Begin
 						end if;
 					
 					when stData =>
+						-- if recevied all 8 bits data go to check stop bit state
 						if rDataCnt = 7 and rBaudEnd = '1' then
 							rState <= stStop;
 						else
