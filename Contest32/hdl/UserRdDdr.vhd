@@ -166,7 +166,7 @@ Begin
 				rMtDdrRdAddr(28 downto 7)	<= "0000" & rStartAddr(24 downto 7);
 			else
 				if( (rState = stWtMtDone) and (MtDdrRdBusy = '0') ) then
-					if ( rMtDdrRdAddr(26 downto 7) = (rStartAddr(24 downto 7) + cEndPicAddrOffset) ) and ( rRdRowCnt = 3 ) then
+					if ( ( rMtDdrRdAddr(26 downto 7) = (rStartAddr(24 downto 7) + cEndPicAddrOffset) ) and ( rRdRowCnt = 3 ) ) then
 						rMtDdrRdAddr(28 downto 7)	<= "0000" & rStartAddr(24 downto 7);
 					elsif rMtDdrRdAddr(13 downto 7) = ( rColStartAddr(13 downto 7) + cEndColAddrOffset ) then
 						if rRdRowCnt = 3 then
