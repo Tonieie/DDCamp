@@ -74,6 +74,9 @@ Architecture rtl Of UserRdDdr Is
 			stWtMtDone		
 		);
 	signal	rState			: UserRdStateType;
+
+	signal	rRowCnt			: std_logic_vector(9 downto 0);
+	signal	rColCnt			: std_logic_vector(9 downto 0);
 	
 Begin
 
@@ -147,19 +150,38 @@ Begin
 				rMtDdrRdAddr(26 downto 7)	<=	(others => '0');
 			else
 				if( (rState = stWtMtDone) and (MtDdrRdBusy = '0') ) then
-					-- check if all picxels have been read
-					if rMtDdrRdAddr(21 downto 7) = 24575 then
-						rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
-						rMtDdrRdAddr(26 downto 7)	<= (others => '0');
+					if DipSwitch(1) = '1' then
+
+						if ( ( rMtDdrRdAddr(23 downto 12) >= 575 ) and ( rMtDdrRdAddr(11 downto 10) = "11" ) ) then
+							rMtDdrRdAddr(28)	<= '1';
+							rMtDdrRdAddr(27)	<= not(DipSwitch(0));
+						else
+							rMtDdrRdAddr(28)	<= '0';
+							rMtDdrRdAddr(27)	<= DipSwitch(0);
+						end if ;
+
+						if rMtDdrRdAddr(21 downto 7) = 24575 then
+							rMtDdrRdAddr(26 downto 7)	<= (others => '0');
+						else
+							rMtDdrRdAddr(26 downto 7)	<= rMtDdrRdAddr(26 downto 7) + 1;
+						end if ;
+
 					else
-						rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) + 1;
-					end if ;
+						-- check if all picxels have been read
+						if rMtDdrRdAddr(21 downto 7) = 24575 then
+							rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
+							rMtDdrRdAddr(26 downto 7)	<= (others => '0');
+						else
+							rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) + 1;
+						end if ;
+					end if;
 				else
 					rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7);
 				end if;
 			end if;
 		end if;
 	end process u_rMtDdrRdAddr;
+
 
 ----------------------------------------------------------------------------------
 -- State Machine 
