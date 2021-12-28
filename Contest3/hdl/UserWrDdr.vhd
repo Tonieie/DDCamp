@@ -95,14 +95,10 @@ Begin
 -- Output assignment
 ----------------------------------------------------------------------------------
 
-	--Bypass
-	-- T2UWrFfRdEn		<=	rUWr2DFfRdEn;
-	-- UWr2DFfRdData( 63 downto 0 )	<=	rUWr2DFfRdData(63 downto 0);
-	-- UWr2DFfRdCnt( 15 downto 0 )		<=	rUWr2DffRdCnt( 15 downto 0 );
-
 	Ds2UWrFfRdEn	<=	rDs2UWrFfRdEn;
 	T2UWrFfRdEn		<=	rT2UWrFfRdEn;
 
+	--Bypass
 	UWr2DFfRdData(63 downto 0)	<=	rUWr2DFfRdData(63 downto 0);
 	UWr2DFfRdCnt(15 downto 0)	<=	rUWr2DFfRdCnt(15 downto 0);
 	
@@ -144,11 +140,11 @@ Begin
 	begin
 		if rising_edge(Clk) then
 			if RstB = '0' then
-				-- start at addr = 24544 (last row first col which is the first received pixcel's addr)
+				-- Normal Pic start at addr = 24544 (last row first col which is the first received pixcel's addr)
 				rMtDdrWrAddrNm(28 downto 7)	<=	"00" & x"05FE0";
 			else
 				if( (rSelIn = '0') and (rState = stWtMtDone) and (MtDdrWrBusy = '0') ) then
-					-- check if reached first row last col
+					-- check if reached first row last col switch between 1st and 2nd 128MB
 					if rMtDdrWrAddrNm(26 downto 7) = 31 then
 						if rMtDdrWrAddrNm(28 downto 27) = "01" then
 							rMtDdrWrAddrNm(28 downto 27)	<=	"00";
@@ -173,11 +169,11 @@ Begin
 	begin
 		if rising_edge(Clk) then
 			if RstB = '0' then
-				-- start at addr = 24544 (last row first col which is the first received pixcel's addr)
+				-- DownScale Pic start at addr = 24568 (last row first col which is bottom left of DownScale Pic)
 				rMtDdrWrAddrDs(28 downto 7)	<=	"10" & x"05FF8";
 			else
 				if( (rSelIn = '1') and (rState = stWtMtDone) and (MtDdrWrBusy = '0') ) then
-					-- check if reached first row last col
+					-- check if reached first row last col switch between 3rd and 4th 128MB
 					if rMtDdrWrAddrDs(26 downto 7) = 18463 then
 						if rMtDdrWrAddrDs(28 downto 27) = "11" then
 							rMtDdrWrAddrDs(28 downto 27)	<=	"10";
@@ -197,6 +193,31 @@ Begin
 			end if;
 		end if;
 	end process u_rMtDdrWrAddrDs;
+
+----------------------------------------------------------------------------------
+-- Multiplexer to Select between Normal Picture Fifo (rSelIn = '0') or DownScale Picture Fifo (rSelIn = '1') 
+----------------------------------------------------------------------------------
+
+	u_rSelIn: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				rSelIn <= '0';
+			else
+				if rState = stCheckFf then
+					if Ds2UWrFfRdCnt( 15 downto 4 ) /= 0 then
+						rSelIn <= '1';
+					elsif T2UWrFfRdCnt( 15 downto 4 ) /= 0 then
+						rSelIn <= '0';
+					else
+						rSelIn <= rSelIn;
+					end if ;
+				else
+					rSelIn <= rSelIn;
+				end if;
+			end if;
+		end if;
+	end process u_rSelIn;
 
 	u_rMtDdrWrAddr: process(Clk)
 	begin
@@ -251,6 +272,10 @@ Begin
 			end if;
 	end process u_rT2UWrFfRdEn;
 
+----------------------------------------------------------------------------------
+-- Count up when Request finished (Seperate for Normal Picture fifo and DownScale Picture fifo)
+----------------------------------------------------------------------------------
+
 	u_rRowNmReqCnt: process(Clk)
 	begin
 		if rising_edge(Clk) then
@@ -281,26 +306,6 @@ Begin
 		end if;
 	end process u_rRowDsReqCnt;
 
-	u_rSelIn: process(Clk)
-	begin
-		if rising_edge(Clk) then
-			if RstB = '0' then
-				rSelIn <= '0';
-			else
-				if rState = stCheckFf then
-					if Ds2UWrFfRdCnt( 15 downto 4 ) /= 0 then
-						rSelIn <= '1';
-					elsif T2UWrFfRdCnt( 15 downto 4 ) /= 0 then
-						rSelIn <= '0';
-					else
-						rSelIn <= rSelIn;
-					end if ;
-				else
-					rSelIn <= rSelIn;
-				end if;
-			end if;
-		end if;
-	end process u_rSelIn;
 
 ----------------------------------------------------------------------------------
 -- State Machine 
@@ -322,6 +327,7 @@ Begin
 						end if ;	
 					
 					when stCheckFf	=>
+						--if one or two fifo(s) have data then go to Request state
 						if ( ( T2UWrFfRdCnt( 15 downto 4 ) /= 0 ) or ( Ds2UWrFfRdCnt( 15 downto 4 ) /= 0 ) ) then
 							rState	<=	stReq;
 						else

@@ -166,6 +166,7 @@ Begin
 			if RstB = '0' then
 				rMtDdrRdAddr(28 downto 7)	<= "0000" & rStartAddr(24 downto 7);
 			else
+				--if request finished
 				if( (rState = stWtMtDone) and (MtDdrRdBusy = '0') ) then
 					--if all pixel reaed then reset to StartAddr
 					if ( ( rMtDdrRdAddr(26 downto 7) = (rStartAddr(24 downto 7) + cEndPicAddrOffset) ) and ( rRdRowCnt = 3 ) ) then
@@ -179,7 +180,7 @@ Begin
 							rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) - 31;
 						end if ;
 					else
-					--Increase Collumn
+					--Increase address
 						rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) + 1;
 					end if ;
 				else

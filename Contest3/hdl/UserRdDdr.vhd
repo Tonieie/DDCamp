@@ -89,6 +89,7 @@ Begin
 	MtDdrRdReq		<= rMtDdrRdReq;
 	MtDdrRdAddr(28 downto 7)		<= rMtDdrRdAddr(28 downto 7); 
 
+	--Bypass
 	URd2HFfWrEn	<=	D2URdFfWrEn;
 	URd2HFfWrData(63 downto 0)	<=	D2URdFfWrData(63 downto 0);
 	D2URdFfWrCnt(15 downto 0)	<=	URd2HFfWrCnt(15 downto 0);
@@ -149,24 +150,29 @@ Begin
 				rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
 				rMtDdrRdAddr(26 downto 7)	<=	(others => '0');
 			else
+				--if requset finished
 				if( (rState = stWtMtDone) and (MtDdrRdBusy = '0') ) then
-					if DipSwitch(1) = '1' then
 
+					-- if select Overlay (normal + downscale) mode
+					if DipSwitch(1) = '1' then
+						-- if reached DownScale position then use DownScale Pic's Address
 						if ( ( rMtDdrRdAddr(22 downto 12) >= 576 ) and ( rMtDdrRdAddr(11 downto 7) >= 23) and ( rMtDdrRdAddr(11 downto 7) /= 31 )) then
 							rMtDdrRdAddr(28)	<= '1';
 							rMtDdrRdAddr(27)	<= not(DipSwitch(0));
+						-- else use Normal Pic's Address
 						else
 							rMtDdrRdAddr(28)	<= '0';
 							rMtDdrRdAddr(27)	<= DipSwitch(0);
 						end if ;
-
+					-- if select normal mode use address from DipSwitch
 					else
 						rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
 					end if;
 
-					-- check if all picxels have been read
+					-- if all picxel readed then reset address
 					if rMtDdrRdAddr(26 downto 7) = 24575 then
 						rMtDdrRdAddr(26 downto 7)	<= (others => '0');
+					-- else increase address
 					else
 						rMtDdrRdAddr(26 downto 7)	<= rMtDdrRdAddr(26 downto 7) + 1;
 					end if ;

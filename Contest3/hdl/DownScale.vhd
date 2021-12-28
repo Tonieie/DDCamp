@@ -53,6 +53,7 @@ begin
 -- DFF
 ----------------------------------------------------------------------------------
 
+    --Count up when received pixel from Bitmappatt
     u_rPixCnt: process(Clk)
     begin
         if rising_edge(Clk) then
@@ -68,6 +69,7 @@ begin
         end if;
     end process u_rPixCnt;
 
+    --Count to ignore 3 pixel
     u_rIgnorePixCnt: process(Clk)
     begin
         if rising_edge(Clk) then
@@ -83,6 +85,7 @@ begin
         end if;
     end process u_rIgnorePixCnt;
 
+    --count up when received 1024 pixel (1 row)
     u_rRowCnt: process(Clk)
     begin
         if rising_edge(Clk) then
@@ -131,6 +134,7 @@ begin
                             rState <= stIdle;
                         end if;
 
+                    -- only receive pixel when row = 0 (ignore 3 rows of every 4 rows)
                     when stRecv =>
                         if rRowCnt /= 0 then
                             rState  <=  stIgnoreRow;
@@ -138,6 +142,7 @@ begin
                             rState  <=  stIgnorePix;
                         end if ;
 
+                    -- only receive 1 pixel of every received 4 pixels
                     when stIgnorePix =>
                         if rRowCnt /= 0 then
                             rState  <= stIgnoreRow;

@@ -31,8 +31,8 @@ architecture rtl of BitMapPatt is
         (
             stIdle      ,
             stHeader    ,
-            stRdData    
-            -- stWrFf      
+            stRdData    ,
+            stSendFf
         );
     signal  rState          : BmPattStateType;
 
@@ -55,6 +55,7 @@ begin
 ----------------------------------------------------------------------------------
 -- DFF
 ----------------------------------------------------------------------------------
+    -- count to ignore 54 bytes of header
     u_rHeaderCnt: process(Clk)
     begin
         if rising_edge(Clk) then
@@ -72,13 +73,15 @@ begin
         end if;
     end process u_rHeaderCnt;
 
+    -- count to check if all r g b received
     u_rRGBCnt: process(Clk)
     begin
         if rising_edge(Clk) then
             if RstB = '0' then
                 rRGBCnt   <=  "11";
             else
-                if ( (rState = stHeader ) and (rHeaderCnt = 53) ) or rRGBCnt = 0 then
+                -- reset when send
+                if rState = stSendFf then
                     rRGBCnt     <=  "11";
                 elsif ( (rState = stRdData ) and (RxBmWrEn = '1') ) then
                     rRGBCnt     <=  rRGBCnt - 1;
@@ -89,6 +92,7 @@ begin
         end if;
     end process u_rRGBCnt;
 
+    -- count when received pixel to check if 1 picture received (1 pic = 786432 pixels)
     u_rPixCnt: process(Clk)
     begin
         if rising_edge(Clk) then
@@ -106,6 +110,7 @@ begin
         end if;
     end process u_rPixCnt;
 
+    -- Shift Right Register because bitmap send bgr but we use rgb
     u_rBmFfWrData: process(Clk)
     begin
         if rising_edge(Clk) then
@@ -127,7 +132,7 @@ begin
             if RstB = '0' then
                 rBmFfWrEn <=  '0';
             else
-                if rRGBCnt = 0 then
+                if rState = stSendFf then
                     rBmFfWrEn <=  '1';
                 else
                     rBmFfWrEn <=  '0';
@@ -155,6 +160,7 @@ begin
                             rState  <=  stIdle;
                         end if ;
 
+                    -- wait until all 54 bytes of header received
                     when stHeader   =>
                         if rHeaderCnt = 53 then
                             rState  <=  stRdData;
@@ -162,12 +168,19 @@ begin
                             rState  <=  stHeader;
                         end if ;
 
+                    -- send when rgb received
                     when stRdData   =>
                         if rPixCnt = 786433 then
                             rState  <=  stIdle;
+                        elsif rRGBCnt = 0 then
+                            rState  <=  stSendFf;
                         else
                             rState  <=  stRdData;
                         end if ;
+                    
+                    --send 1 pixel
+                    when stSendFf   =>
+                        rState  <=  stRdData;
 
                end case ;
            end if;
