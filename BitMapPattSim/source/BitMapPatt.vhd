@@ -31,8 +31,8 @@ architecture rtl of BitMapPatt is
         (
             stIdle      ,
             stHeader    ,
-            stRdData    
-            -- stWrFf      
+            stRdData    ,
+            stSendFf    
         );
     signal  rState          : BmPattStateType;
 
@@ -40,7 +40,9 @@ architecture rtl of BitMapPatt is
     signal  rBmFfWrData     : std_logic_vector(23 downto 0);
 
     signal  rHeaderCnt      : std_logic_vector(5 downto 0);
-    signal  rRGBCnt          : std_logic_vector(1 downto 0);
+    signal  rRGBCnt         : std_logic_vector(1 downto 0);
+    signal  rPixCnt         : std_logic_vector(19 downto 0);
+    signal  rSendFfCnt      : std_logic_vector(1 downto 0);
 
 begin
     
@@ -77,7 +79,7 @@ begin
             if RstB = '0' then
                 rRGBCnt   <=  "11";
             else
-                if ( (rState = stHeader ) and (rHeaderCnt = 53) ) or rRGBCnt = 0 then
+                if rState = stSendFf then
                     rRGBCnt     <=  "11";
                 elsif ( (rState = stRdData ) and (RxBmWrEn = '1') ) then
                     rRGBCnt     <=  rRGBCnt - 1;
@@ -88,6 +90,23 @@ begin
         end if;
     end process u_rRGBCnt;
 
+    u_rPixCnt: process(Clk)
+    begin
+        if rising_edge(Clk) then
+            if RstB = '0' then
+                rPixCnt <=  (others => '0');
+            else
+                if rPixCnt = 786433 then
+                    rPixCnt <=  (others => '0');
+                elsif rBmFfWrEn = '1' then
+                    rPixCnt <=  rPixCnt + 1;
+                else
+                    rPixCnt <=  rPixCnt;
+                end if ;
+            end if;
+        end if;
+    end process u_rPixCnt;
+
     u_rBmFfWrData: process(Clk)
     begin
         if rising_edge(Clk) then
@@ -95,7 +114,7 @@ begin
                 rBmFfWrData  <=  (others => '0');
             else
                 if ( rState = stRdData ) and ( RxBmWrEn = '1' ) then
-                    rBmFfWrData(23 downto 0) <= rBmFfWrData(15 downto 0) & RxBmWrData;
+                    rBmFfWrData(23 downto 0) <= RxBmWrData & rBmFfWrData(23 downto 8);
                 else
                     rBmFfWrData(23 downto 0) <= rBmFfWrData(23 downto 0);
                 end if ;
@@ -109,7 +128,7 @@ begin
             if RstB = '0' then
                 rBmFfWrEn <=  '0';
             else
-                if rRGBCnt = 0 then
+                if rState = stSendFf then
                     rBmFfWrEn <=  '1';
                 else
                     rBmFfWrEn <=  '0';
@@ -117,6 +136,21 @@ begin
             end if;
         end if;
     end process u_rBmFfWrEn;
+
+    u_rSendFfCnt: process(Clk)
+    begin
+        if rising_edge(Clk) then
+            if RstB = '0' then
+                rSendFfCnt   <=   (others => '0');
+            else
+                if rState = stSendFf then
+                    rSendFfCnt  <=  rSendFfCnt + 1;
+                else
+                    rSendFfCnt  <=  rSendFfCnt;
+                end if ;               
+            end if;
+        end if;
+    end process u_rSendFfCnt;
 
 ----------------------------------------------------------------------------------
 -- State Machine
@@ -145,7 +179,20 @@ begin
                         end if ;
 
                     when stRdData   =>
-                        rState  <=  stRdData;
+                        if rPixCnt = 786433 then
+                            rState  <=  stIdle;
+                        elsif rRGBCnt = 0 then
+                            rState  <=  stSendFf;
+                        else
+                            rState  <=  stRdData;
+                        end if ;
+
+                    when stSendFf   =>
+                        if rSendFfCnt = 3 then
+                            rState  <=  stRdData;
+                        else
+                            rState  <=  stSendFf;
+                        end if;
 
                end case ;
            end if;
