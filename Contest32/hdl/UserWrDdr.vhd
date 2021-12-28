@@ -144,7 +144,7 @@ Begin
 	begin
 		if rising_edge(Clk) then
 			if RstB = '0' then
-				-- start at addr = 24544 (last row first col which is the first received pixcel's addr)
+				-- start at addr = 98176 (last row first col which is the first received pixcel's addr)
 				rMtDdrWrAddrNm(28 downto 7)	<=	"00" & x"17F80";
 			else
 				if( (rSelIn = '0') and (rState = stWtMtDone) and (MtDdrWrBusy = '0') ) then
