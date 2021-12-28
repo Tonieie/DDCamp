@@ -77,6 +77,8 @@ Architecture rtl Of UserRdDdr Is
 
 	signal	rRowCnt			: std_logic_vector(9 downto 0);
 	signal	rColCnt			: std_logic_vector(9 downto 0);
+
+	signal	rRdRowCnt		: std_logic_vector(1 downto 0);
 	
 Begin
 
@@ -150,11 +152,15 @@ Begin
 				rMtDdrRdAddr(26 downto 7)	<=	(others => '0');
 			else
 				if( (rState = stWtMtDone) and (MtDdrRdBusy = '0') ) then
-					if rMtDdrRdAddr(26 downto 7) = (x"17F9F") then
+					if ( rMtDdrRdAddr(26 downto 7) = (x"05F9F") ) and ( rRdRowCnt = 3 ) then
 						rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
 						rMtDdrRdAddr(26 downto 7)	<= (others => '0');
 					elsif rMtDdrRdAddr(11 downto 7) = 31 then
-						rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) + 97;
+						if rRdRowCnt = 3 then
+                            rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) + 97;
+						else
+							rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) - 31;
+						end if ;
 					else
 						rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) + 1;
 					end if ;
@@ -165,6 +171,21 @@ Begin
 			end if;
 		end if;
 	end process u_rMtDdrRdAddr;
+
+	u_rRdRowCnt: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				rRdRowCnt	<=	"00";
+			else
+				if (rState = stWtMtDone) and (MtDdrRdBusy = '0') and (rMtDdrRdAddr(11 downto 7) = 31) then
+					rRdRowCnt	<=	rRdRowCnt + 1;
+				else
+					rRdRowCnt	<=	rRdRowCnt;
+				end if ;
+			end if;
+		end if;
+	end process u_rRdRowCnt;
 
 
 ----------------------------------------------------------------------------------
