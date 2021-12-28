@@ -95,14 +95,10 @@ Begin
 -- Output assignment
 ----------------------------------------------------------------------------------
 
-	--Bypass
-	-- T2UWrFfRdEn		<=	rUWr2DFfRdEn;
-	-- UWr2DFfRdData( 63 downto 0 )	<=	rUWr2DFfRdData(63 downto 0);
-	-- UWr2DFfRdCnt( 15 downto 0 )		<=	rUWr2DffRdCnt( 15 downto 0 );
-
 	Ds2UWrFfRdEn	<=	rDs2UWrFfRdEn;
 	T2UWrFfRdEn		<=	rT2UWrFfRdEn;
 
+	--Bypass
 	UWr2DFfRdData(63 downto 0)	<=	rUWr2DFfRdData(63 downto 0);
 	UWr2DFfRdCnt(15 downto 0)	<=	rUWr2DFfRdCnt(15 downto 0);
 	
@@ -151,6 +147,7 @@ Begin
 					-- if writen to the last col then go back to the upper line
 					if rRowNmReqCnt = 127 then
 						rMtDdrWrAddrNm(28 downto 7)	<= rMtDdrWrAddrNm(28 downto 7) - 255;
+					-- else go to next collumn
 					else
 						rMtDdrWrAddrNm(28 downto 7)	<= rMtDdrWrAddrNm(28 downto 7) + 1;
 					end if ;
@@ -180,6 +177,7 @@ Begin
 					-- if writen to the last col then go back to the upper line
 					elsif rRowDsReqCnt = 7 then
 						rMtDdrWrAddrDs(28 downto 7)	<= rMtDdrWrAddrDs(28 downto 7) - 39;
+					-- else go to next collumn
 					else
 						rMtDdrWrAddrDs(28 downto 7)	<= rMtDdrWrAddrDs(28 downto 7) + 1;
 					end if ;
@@ -191,7 +189,7 @@ Begin
 	end process u_rMtDdrWrAddrDs;
 
 ----------------------------------------------------------------------------------
--- Multiplexer to Select between Normal Picture Fifo or DownScale Picture Fifo 
+-- Multiplexer to Select between Normal Picture Fifo (rSelIn = '0') or DownScale Picture Fifo (rSelIn = '1') 
 ----------------------------------------------------------------------------------
 	u_rSelIn: process(Clk)
 	begin
@@ -268,7 +266,7 @@ Begin
 	end process u_rT2UWrFfRdEn;
 
 ----------------------------------------------------------------------------------
--- Count Request of Normal Picture and DownScale Picture
+-- Count up when Request finished (Seperate for Normal Picture fifo and DownScale Picture fifo)
 ----------------------------------------------------------------------------------
 
 	u_rRowNmReqCnt: process(Clk)
@@ -322,6 +320,7 @@ Begin
 						end if ;	
 					
 					when stCheckFf	=>
+						--if one or two fifo(s) have data then go to Request state
 						if ( ( T2UWrFfRdCnt( 15 downto 4 ) /= 0 ) or ( Ds2UWrFfRdCnt( 15 downto 4 ) /= 0 ) ) then
 							rState	<=	stReq;
 						else

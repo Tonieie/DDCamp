@@ -91,6 +91,7 @@ Architecture rtl Of UserRdDdr Is
 	signal	rDipSw0			: std_logic_vector(1 downto 0);
 	signal	rDipSw1			: std_logic_vector(1 downto 0);
 
+	--StartAddr for Offset
 	signal	rRowStartAddr	: std_logic_vector(23 downto 7);
 	signal	rColStartAddr	: std_logic_vector(13 downto 7);
 	signal	rStartAddr		: std_logic_vector(24 downto 7);
@@ -166,15 +167,19 @@ Begin
 				rMtDdrRdAddr(28 downto 7)	<= "0000" & rStartAddr(24 downto 7);
 			else
 				if( (rState = stWtMtDone) and (MtDdrRdBusy = '0') ) then
+					--if all pixel reaed then reset to StartAddr
 					if ( ( rMtDdrRdAddr(26 downto 7) = (rStartAddr(24 downto 7) + cEndPicAddrOffset) ) and ( rRdRowCnt = 3 ) ) then
 						rMtDdrRdAddr(28 downto 7)	<= "0000" & rStartAddr(24 downto 7);
+					--if Reached end of the row
 					elsif rMtDdrRdAddr(13 downto 7) = ( rColStartAddr(13 downto 7) + cEndColAddrOffset ) then
+						--duplicate row = 3? Yes : go to next row , No : get back to the start of the row
 						if rRdRowCnt = 3 then
                             rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) + 97;
 						else
 							rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) - 31;
 						end if ;
 					else
+					--Increase Collumn
 						rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) + 1;
 					end if ;
 				else
@@ -231,7 +236,7 @@ Begin
 			if RstB = '0' then
 				rDipSw0Cnt	<=	"00";
 			else
-				--detect rising edge
+				--count up when rising edge detected
 				if rDipSw0(1 downto 0) = "01" then
 					rDipSw0Cnt	<=	rDipSw0Cnt + 1;
 				else
@@ -247,7 +252,7 @@ Begin
 			if RstB = '0' then
 				rDipSw1Cnt	<=	"00";
 			else
-				--detect rising edge
+				--count up when rising edge detected
 				if rDipSw1(1 downto 0) = "01" then
 					rDipSw1Cnt	<=	rDipSw1Cnt + 1;
 				else
@@ -258,7 +263,7 @@ Begin
 	end process u_rDipSw1Cnt;
 
 ----------------------------------------------------------------------------------
--- Start Address Signals
+-- Set Offset of each grid by using Start Address Signals
 ----------------------------------------------------------------------------------
 
 	u_rColStartAddr: process(Clk)
