@@ -124,7 +124,7 @@ Begin
 				rMtDdrWrAddr(28 downto 7)	<=	"00" & x"05FE0";
 			else
 				if( (rState = stWtMtDone) and (MtDdrWrBusy = '0') ) then
-					-- check if reached first row last col
+					-- check if reached first row last col switch to next 128 MB section
 					if rMtDdrWrAddr(26 downto 7) = 31 then
 						rMtDdrWrAddr(28 downto 27)	<= rMtDdrWrAddr(28 downto 27) + 1;
 						rMtDdrWrAddr(26 downto 7)	<= x"05FE0";
@@ -176,6 +176,7 @@ Begin
 						end if ;	
 					
 					when stCheckFf	=>
+						--check if fifo have data
 						if T2UWrFfRdCnt( 15 downto 4 ) /= 0 then
 							rState	<=	stReq;
 						else
