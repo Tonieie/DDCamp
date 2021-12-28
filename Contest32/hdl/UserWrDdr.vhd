@@ -190,6 +190,30 @@ Begin
 		end if;
 	end process u_rMtDdrWrAddrDs;
 
+----------------------------------------------------------------------------------
+-- Multiplexer to Select between Normal Picture Fifo or DownScale Picture Fifo 
+----------------------------------------------------------------------------------
+	u_rSelIn: process(Clk)
+	begin
+		if rising_edge(Clk) then
+			if RstB = '0' then
+				rSelIn <= '0';
+			else
+				if rState = stCheckFf then
+					if Ds2UWrFfRdCnt( 15 downto 4 ) /= 0 then
+						rSelIn <= '1';
+					elsif T2UWrFfRdCnt( 15 downto 4 ) /= 0 then
+						rSelIn <= '0';
+					else
+						rSelIn <= rSelIn;
+					end if ;
+				else
+					rSelIn <= rSelIn;
+				end if;
+			end if;
+		end if;
+	end process u_rSelIn;
+
 	u_rMtDdrWrAddr: process(Clk)
 	begin
 			if rSelIn = '1' then
@@ -243,6 +267,10 @@ Begin
 			end if;
 	end process u_rT2UWrFfRdEn;
 
+----------------------------------------------------------------------------------
+-- Count Request of Normal Picture and DownScale Picture
+----------------------------------------------------------------------------------
+
 	u_rRowNmReqCnt: process(Clk)
 	begin
 		if rising_edge(Clk) then
@@ -273,26 +301,6 @@ Begin
 		end if;
 	end process u_rRowDsReqCnt;
 
-	u_rSelIn: process(Clk)
-	begin
-		if rising_edge(Clk) then
-			if RstB = '0' then
-				rSelIn <= '0';
-			else
-				if rState = stCheckFf then
-					if Ds2UWrFfRdCnt( 15 downto 4 ) /= 0 then
-						rSelIn <= '1';
-					elsif T2UWrFfRdCnt( 15 downto 4 ) /= 0 then
-						rSelIn <= '0';
-					else
-						rSelIn <= rSelIn;
-					end if ;
-				else
-					rSelIn <= rSelIn;
-				end if;
-			end if;
-		end if;
-	end process u_rSelIn;
 
 ----------------------------------------------------------------------------------
 -- State Machine 
