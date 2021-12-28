@@ -86,6 +86,7 @@ Begin
 	MtDdrRdReq		<= rMtDdrRdReq;
 	MtDdrRdAddr(28 downto 7)		<= rMtDdrRdAddr(28 downto 7); 
 
+	--Bypass
 	URd2HFfWrEn	<=	D2URdFfWrEn;
 	URd2HFfWrData(63 downto 0)	<=	D2URdFfWrData(63 downto 0);
 	D2URdFfWrCnt(15 downto 0)	<=	URd2HFfWrCnt(15 downto 0);
@@ -143,13 +144,17 @@ Begin
 	begin
 		if rising_edge(Clk) then
 			if RstB = '0' then
+				-- Select 128 MB section by DipSwitch
 				rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
 				rMtDdrRdAddr(26 downto 7)	<=	(others => '0');
 			else
+				-- if request finished
 				if( (rState = stWtMtDone) and (MtDdrRdBusy = '0') ) then
+					-- if reached end of pic go to the start of pic
 					if rMtDdrRdAddr(21 downto 7) = ("101" & x"FFF") then
 						rMtDdrRdAddr(28 downto 27)	<= DipSwitch(1 downto 0);
 						rMtDdrRdAddr(26 downto 7)	<= (others => '0');
+					-- else increse address
 					else
 						rMtDdrRdAddr(28 downto 7)	<= rMtDdrRdAddr(28 downto 7) + 1;
 					end if ;

@@ -120,10 +120,13 @@ Begin
 			if RstB = '0' then
 				rMtDdrWrAddr(28 downto 7)	<=	(others => '0');
 			else
+				-- if request finished
 				if( (rState = stWtMtDone) and (MtDdrWrBusy = '0') ) then
+					-- if reached end of pic go to the start of next 128 MB section
 					if rMtDdrWrAddr(21 downto 7) = ("101" & x"FFF") then
 						rMtDdrWrAddr(28 downto 27)	<= rMtDdrWrAddr(28 downto 27) + 1;
 						rMtDdrWrAddr(26 downto 7)	<= (others => '0');
+					-- else increase address
 					else
 						rMtDdrWrAddr(28 downto 7)	<= rMtDdrWrAddr(28 downto 7) + 1;
 					end if ;
@@ -154,6 +157,7 @@ Begin
 						end if ;	
 					
 					when stCheckFf	=>
+						--check if fifo have data
 						if T2UWrFfRdCnt( 15 downto 4 ) /= 0 then
 							rState	<=	stReq;
 						else
