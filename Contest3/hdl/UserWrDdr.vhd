@@ -178,7 +178,7 @@ Begin
 			else
 				if( (rSelIn = '1') and (rState = stWtMtDone) and (MtDdrWrBusy = '0') ) then
 					-- check if reached first row last col
-					if rMtDdrWrAddrDs(26 downto 7) = 18431 then
+					if rMtDdrWrAddrDs(26 downto 7) = 18463 then
 						if rMtDdrWrAddrDs(28 downto 27) = "11" then
 							rMtDdrWrAddrDs(28 downto 27)	<=	"10";
 						else
